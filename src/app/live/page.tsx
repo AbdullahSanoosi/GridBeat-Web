@@ -14,6 +14,8 @@ import { RaceControlFeed, PitStopsList, TeamRadioList } from "@/components/live/
 import { WeatherPanel } from "@/components/live/weather-panel";
 import { FastestLapOverlay } from "@/components/live/fastest-lap-overlay";
 import { TrackMap } from "@/components/live/track-map";
+import { TelemetryCompare } from "@/components/live/telemetry-compare";
+import { PlaybackControl } from "@/components/live/playback-control";
 
 const SECTOR_COLORS: Record<number, string> = {
   0: "var(--color-border)",
@@ -37,9 +39,25 @@ export default function LiveTimingPage() {
   const pitStops = useLiveTimingStore((s) => s.pitStops);
   const teamRadio = useLiveTimingStore((s) => s.teamRadio);
   const weather = useLiveTimingStore((s) => s.weather);
+  const telemetryHistory = useLiveTimingStore((s) => s.telemetryHistory);
+  const lapTimeHistory = useLiveTimingStore((s) => s.lapTimeHistory);
+  const currentLapSectors = useLiveTimingStore((s) => s.currentLapSectors);
   const connect = useLiveTimingStore((s) => s.connect);
   const reconnect = useLiveTimingStore((s) => s.reconnect);
-  const [tab, setTab] = useState<"tower" | "comms" | "map">("tower");
+  const [tab, setTab] = useState<"tower" | "comms" | "map" | "telemetry">("tower");
+  const [telemetrySelected, setTelemetrySelected] = useState<Set<number>>(new Set());
+
+  const toggleTelemetryDriver = (driverNumber: number) => {
+    setTelemetrySelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(driverNumber)) {
+        next.delete(driverNumber);
+      } else {
+        next.add(driverNumber);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     connect();
@@ -55,6 +73,7 @@ export default function LiveTimingPage() {
       <FastestLapOverlay />
       <LiveHeader
         connected={mounted && connected}
+        mounted={mounted}
         sessionName={mounted && sessionInfo ? grandPrixName(sessionInfo) : "LIVE TIMING"}
         sessionType={sessionInfo?.type ?? null}
         clockRemaining={clock?.remaining ?? null}
@@ -85,6 +104,9 @@ export default function LiveTimingPage() {
         <TabButton active={tab === "map"} onClick={() => setTab("map")}>
           Map
         </TabButton>
+        <TabButton active={tab === "telemetry"} onClick={() => setTab("telemetry")}>
+          Telemetry
+        </TabButton>
       </div>
 
       {mounted && rows.length === 0 && (
@@ -96,6 +118,18 @@ export default function LiveTimingPage() {
       {rows.length > 0 && tab === "tower" && <Tower rows={rows} />}
 
       {tab === "map" && <TrackMap />}
+
+      {tab === "telemetry" && (
+        <TelemetryCompare
+          drivers={rows}
+          leaderboard={leaderboard}
+          telemetryHistory={telemetryHistory}
+          lapTimeHistory={lapTimeHistory}
+          currentLapSectors={currentLapSectors}
+          selected={telemetrySelected}
+          onToggle={toggleTelemetryDriver}
+        />
+      )}
 
       {tab === "comms" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -144,6 +178,7 @@ function TabButton({
 
 function LiveHeader({
   connected,
+  mounted,
   sessionName,
   sessionType,
   clockRemaining,
@@ -152,6 +187,7 @@ function LiveHeader({
   onReconnect,
 }: {
   connected: boolean;
+  mounted: boolean;
   sessionName: string;
   sessionType: string | null;
   clockRemaining: string | null;
@@ -185,6 +221,7 @@ function LiveHeader({
           />
           {connected ? "LIVE" : "OFFLINE"}
         </button>
+        {mounted && <PlaybackControl />}
       </div>
     </div>
   );

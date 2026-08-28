@@ -2,12 +2,11 @@
  * Ported from GridBeat (Flutter) lib/features/live_timing/providers/live_timing_provider.dart
  * (LiveTimingNotifier). This is the core real-time state machine: WS message
  * dispatch, REST bootstrap, session-change detection, steward-status
- * derivation.
+ * derivation, and the client-side DVR/playback buffer (100ms ticker, 15-min
+ * rolling buffer, pause/delay/catch-up replay — see the "Playback buffer"
+ * section below).
  *
- * Deliberately NOT ported in this pass (noted for a follow-up):
- * - The client-side DVR/playback buffer (100ms ticker, 15-min rolling
- *   buffer, pause/delay/catch-up replay) — messages are applied immediately
- *   in real time here instead of through a delay buffer.
+ * Deliberately NOT ported in this pass:
  * - Debug telemetry seeding (kDebugMode-only in the Flutter app, not needed
  *   for a real deployment).
  */
@@ -94,6 +93,13 @@ interface LiveTimingActions {
   reconnect: () => void;
   forceRefresh: () => Promise<void>;
   onSessionEnded: () => void;
+  /** Shifts the displayed feed behind wall-clock by delayMs — e.g. to match a broadcast stream's own lag. 0 = fully live. */
+  setPlaybackDelay: (delayMs: number) => void;
+  pausePlayback: () => void;
+  /** Resumes from a pause — the backlog that built up while paused plays back at CATCH_UP_MULTIPLIER x until caught up. */
+  resumePlayback: () => void;
+  /** Clears any delay/pause and jumps straight to wall-clock live, dropping the buffered backlog instead of playing through it. */
+  skipToLive: () => void;
 }
 
 export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
@@ -106,6 +112,17 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
     let sessionPollTimer: ReturnType<typeof setInterval> | null = null;
     const trackCells = new Set<string>();
     let started = false;
+
+    // ── Playback buffer (client-side DVR) — mirrors LiveTimingNotifier's
+    // _buffer/_playhead/_playbackDelay/_paused instance fields. ─────────────
+    const playbackBuffer: { receivedAt: number; msg: Json }[] = [];
+    let playhead: number | null = null;
+    let playbackDelayMs = 0;
+    let paused = false;
+    let playbackTicker: ReturnType<typeof setInterval> | null = null;
+    const TICK_INTERVAL_MS = 100;
+    const CATCH_UP_MULTIPLIER = 6;
+    const MAX_BUFFER_WINDOW_MS = 15 * 60 * 1000;
 
     // ── Small helpers (ported 1:1 from the Dart private helpers) ───────────
 
@@ -546,6 +563,7 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
         const typeChanged = newType !== "" && newType !== currentType;
         if (!keyChanged && !nameChanged && !typeChanged) return;
 
+        resetPlaybackBuffer();
         const info = sessionInfoFromRestRow(pick);
         set({
           sessionInfo: info,
@@ -1124,6 +1142,73 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
       set({ leaderboard: updated });
     }
 
+    // ── Playback buffer (client-side DVR) ───────────────────────────────────
+    // Every WS message lands here with its arrival time instead of being
+    // applied straight away — tickPlayback drains it into handleMessage once
+    // each message's age has passed playbackDelayMs. Lets the UI trail
+    // wall-clock by a chosen amount (to match a delayed broadcast) and/or
+    // pause entirely while the queue keeps filling in the background.
+
+    function onRawMessage(msg: Json): void {
+      // The full-state snapshot (type === undefined, sent once per WS
+      // connection) is a structural bootstrap, not part of the
+      // moment-to-moment feed — always apply it right away so a reconnect
+      // doesn't sit blank for the whole delay/pause window. Everything
+      // after it still buffers normally.
+      if (msg.type === undefined) {
+        handleMessage(msg);
+        return;
+      }
+      playbackBuffer.push({ receivedAt: Date.now(), msg });
+      trimBuffer();
+    }
+
+    function trimBuffer(): void {
+      const cutoff = Date.now() - MAX_BUFFER_WINDOW_MS;
+      while (playbackBuffer.length > 0 && playbackBuffer[0].receivedAt < cutoff) {
+        playbackBuffer.shift();
+      }
+      // A pause longer than the buffer window trims past the frozen
+      // playhead — snap it forward so it doesn't chase a target that no
+      // longer exists.
+      if (playhead != null && playbackBuffer.length > 0 && playhead < playbackBuffer[0].receivedAt) {
+        playhead = playbackBuffer[0].receivedAt;
+      }
+    }
+
+    function resetPlaybackBuffer(): void {
+      playbackBuffer.length = 0;
+      playhead = null;
+    }
+
+    function tickPlayback(): void {
+      const target = Date.now() - playbackDelayMs;
+      if (playhead == null) playhead = target;
+
+      if (!paused && target > playhead) {
+        const gap = target - playhead;
+        // More than ~2s of backlog (post-pause, or delay just decreased) ->
+        // replay faster than real time so it visibly plays through instead
+        // of jumping; once close, settle back to tracking 1:1 with real time.
+        const step = gap > 2000 ? TICK_INTERVAL_MS * CATCH_UP_MULTIPLIER : TICK_INTERVAL_MS;
+        const advanced = playhead + step;
+        playhead = advanced > target ? target : advanced;
+
+        while (playbackBuffer.length > 0 && playbackBuffer[0].receivedAt <= playhead) {
+          handleMessage(playbackBuffer.shift()!.msg);
+        }
+      }
+      // else: target <= playhead (delay was just increased, or paused) —
+      // hold the playhead where it is rather than moving it backward;
+      // messages already shown can't be un-applied.
+
+      const bufferedMs = target > playhead ? target - playhead : 0;
+      const s = get();
+      if (bufferedMs !== s.bufferedMs || paused !== s.paused || playbackDelayMs !== s.playbackDelayMs) {
+        set({ playbackDelayMs, paused, bufferedMs });
+      }
+    }
+
     // ── Wiring ───────────────────────────────────────────────────────────────
 
     function start(): void {
@@ -1137,8 +1222,9 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
           bootstrapTimer = setTimeout(bootstrapOnce, 1000);
         }
       });
-      ws.onMessage(handleMessage);
+      ws.onMessage(onRawMessage);
       ws.connect();
+      playbackTicker = setInterval(tickPlayback, TICK_INTERVAL_MS);
     }
 
     return {
@@ -1151,7 +1237,34 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
         if (bootstrapTimer) clearTimeout(bootstrapTimer);
         if (radioPollTimer) clearInterval(radioPollTimer);
         if (sessionPollTimer) clearInterval(sessionPollTimer);
+        if (playbackTicker) clearInterval(playbackTicker);
         ws.disconnect();
+      },
+
+      setPlaybackDelay: (delayMs: number) => {
+        playbackDelayMs = delayMs;
+        set({ playbackDelayMs: delayMs });
+      },
+
+      pausePlayback: () => {
+        paused = true;
+        set({ paused: true });
+      },
+
+      resumePlayback: () => {
+        paused = false;
+        set({ paused: false });
+      },
+
+      skipToLive: () => {
+        playbackDelayMs = 0;
+        paused = false;
+        const target = Date.now();
+        while (playbackBuffer.length > 0 && playbackBuffer[0].receivedAt <= target) {
+          handleMessage(playbackBuffer.shift()!.msg);
+        }
+        playhead = target;
+        set({ playbackDelayMs: 0, paused: false, bufferedMs: 0 });
       },
 
       reconnect: () => {
@@ -1160,6 +1273,7 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
       },
 
       forceRefresh: async () => {
+        resetPlaybackBuffer();
         set({
           sessionInfo: null,
           leaderboard: {},
