@@ -58,6 +58,78 @@ class of thing as the race-control-empty-for-a-session note below). Re-verify
 pixel output against a real live/replay session with actual CarData traffic
 before trusting the chart rendering further.
 
+**Done — live broadcast commentary audio:** ported from the Flutter repo's
+`feature/commentary-audio` branch (not `develop`/`main` — that branch has
+the actual commentary player; `develop` only has the `AudioStreamInfo`
+model plumbing, `main` is far behind both). F1's own live-coverage HLS
+stream (`AudioStreamInfo`/`audioStreamsFromJson`/`primaryCommentaryStream`
+already existed in `src/lib/models/live.ts`; only the UI/playback layer and
+two bugfixes were missing before this pass:
+- `src/components/live/commentary-player.tsx` — a `COMMENTARY` toggle chip
+  in the live page header (green when on, muted when off; hidden entirely
+  when no stream is available yet, matching the Flutter version's
+  conditional render), backed by an `HTMLAudioElement` + lazy-loaded
+  `hls.js` for browsers without native HLS support (Safari plays `.m3u8`
+  natively via `canPlayType`; every other browser needs the ~600KB hls.js,
+  dynamically imported so it never loads for anyone who leaves commentary
+  off). One effect keyed on `[stream?.uri, enabled, radioPlayingUrl]`
+  collapses the Dart version's three separate `ref.listen` callbacks into a
+  single sync function, reading fresh state via `useLiveTimingStore.getState()`
+  inside the effect (same imperative-read idiom the track map already uses)
+  rather than closing over the outer `stream` object, which is a new
+  reference every render.
+- `src/lib/live/radio-playback-store.ts` — a tiny standalone Zustand store
+  (deliberately *not* folded into the main live-timing store, since it's UI
+  coordination state, not WS-driven domain data) mirroring the Flutter
+  version's `_playingUrlProvider`: lets the commentary player duck
+  (auto-pause) itself while a team radio clip is playing and resume once it
+  stops. `TeamRadioList` in `src/components/live/comms.tsx` was switched
+  from local `useState` to this shared store so both components see the
+  same "is a radio clip playing" signal.
+- **Bugfix 1** (ported from the feature branch): `audioStreamsFromJson` now
+  accepts F1's SignalR delta shape for `Streams` (an index-keyed object,
+  `{"0": {...}}`) in addition to the plain-array snapshot shape — same
+  quirk already worked around for `RaceControlMessages.Messages`. Since
+  `AudioStreams` arrives exactly once per session, a shape this misses was
+  gone for the rest of the session with nothing to retry.
+- **Bugfix 2** (ported from the feature branch): `onRawMessage` in
+  `src/lib/live/store.ts` now special-cases `msg.type === "AudioStreams"`
+  to bypass the DVR playback buffer entirely and apply immediately — same
+  treatment as the initial full-state snapshot. This one-shot event has no
+  later update to supersede a lost one, so routing it through the buffer
+  risked `trimBuffer` silently evicting it during a long pause/delay before
+  it was ever applied. This bugfix is arguably *more* relevant on the web
+  port than it was upstream, since the DVR buffer was ported into this repo
+  in the same session as this commentary work — there was no window where
+  the web port had the buffer without also having this fix.
+- **A bug found (not ported from Flutter — new to this port) and fixed
+  during verification:** the initial `audio.play()` error handler logged
+  every rejection, including the benign `AbortError` that fires when a
+  later effect run calls `.pause()` while an earlier `.play()` call is
+  still pending (a well-known `HTMLMediaElement` race, not specific to this
+  code). Fixed by checking `e.name === "AbortError"` and returning early
+  before logging — note this checks `"name" in e`, not `instanceof
+  DOMException`, because `DOMException` does not inherit from `Error` per
+  spec and an `instanceof Error` check silently failed to match here.
+- **Verified in a real browser with genuinely live production data:**
+  intercepted `window.Audio` to get a direct handle on the underlying
+  element (it's never attached to the DOM, so `document.querySelectorAll
+  ('audio')` can't find it) and confirmed against the real F1 stream
+  (`rdio.formula1.com`) — `paused: false`, `currentTime` continuously
+  advancing, `readyState: 4`, zero playback errors. Confirmed the mute
+  toggle pauses/resumes the *same* `Audio` instance (only one was ever
+  constructed — the `loadedUrlRef` reload-avoidance optimization holds).
+  Confirmed the full radio-ducking cycle end to end: starting a team radio
+  clip paused commentary immediately, stopping the clip resumed it. Zero
+  console errors across the entire sequence. This session's test
+  environment happened to report `"maybe"` from `canPlayType('application/
+  vnd.apple.mpegurl')` (i.e., it took the native-HLS path, not hls.js) —
+  don't assume that generalizes to a real user's Chrome/Firefox, where
+  `canPlayType` for HLS returns `""` and the hls.js path is what actually
+  carries this feature; the native-path code was verified live here, the
+  hls.js path was not (though hls.js itself is a mature, extremely widely
+  used library for exactly this scenario).
+
 **Done — driver/constructor detail pages:** `/driver/[driverId]`,
 `/constructor/[constructorId]` — ports `driver_details_screen.dart`/
 `constructor_details_screen.dart` + `enrichment_provider.dart`. Hero, bio,

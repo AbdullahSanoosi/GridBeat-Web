@@ -1155,7 +1155,16 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
       // moment-to-moment feed — always apply it right away so a reconnect
       // doesn't sit blank for the whole delay/pause window. Everything
       // after it still buffers normally.
-      if (msg.type === undefined) {
+      //
+      // AudioStreams gets the same immediate treatment despite being a
+      // typed event: F1 sends it exactly once, early in the session, not
+      // as a repeating stream like CarData/TimingData. Routing a one-shot
+      // event through the DVR buffer risks trimBuffer silently evicting it
+      // (long pause, or a delay that ages past MAX_BUFFER_WINDOW_MS) before
+      // it's ever applied — and unlike every other feed, there's no later
+      // update to supersede the lost one, so commentary would be gone for
+      // the session.
+      if (msg.type === undefined || msg.type === "AudioStreams") {
         handleMessage(msg);
         return;
       }

@@ -252,11 +252,26 @@ export interface AudioStreamInfo {
   uri: string;
 }
 
-/** Parses the {"Streams": [...]} wrapper both the WS feed and /api/audiostreams send. */
+/**
+ * Parses the {"Streams": [...]} wrapper both the WS feed and /api/audiostreams
+ * send, skipping any entry with no playable URL.
+ *
+ * F1's SignalR feed represents list-valued fields as a plain JSON array in a
+ * full snapshot but as an index-keyed object ({"0": {...}}) in an
+ * incremental delta — same quirk the backend already works around for
+ * RaceControlMessages.Messages. Handled here too as a second line of
+ * defense: Streams only ever arrives once per session, so a shape this
+ * misses is gone for the rest of the session with nothing to retry.
+ */
 export function audioStreamsFromJson(json: Json | undefined): AudioStreamInfo[] {
   const raw = json?.Streams;
-  if (!Array.isArray(raw)) return [];
-  return raw
+  const list: Json[] | null = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object"
+      ? Object.values(raw)
+      : null;
+  if (list == null) return [];
+  return list
     .map((e: Json): AudioStreamInfo => ({
       name: e.Name?.toString() ?? "",
       language: e.Language?.toString() ?? "",
@@ -638,7 +653,7 @@ export function emptyLiveSnapshot(): LiveSnapshot {
 }
 
 /** The stream to actually play — prefers English, falls back to F1's first. */
-export function primaryCommentaryStream(s: LiveSnapshot): AudioStreamInfo | null {
+export function primaryCommentaryStream(s: Pick<LiveSnapshot, "audioStreams">): AudioStreamInfo | null {
   if (s.audioStreams.length === 0) return null;
   return s.audioStreams.find((a) => a.language.toLowerCase() === "en") ?? s.audioStreams[0];
 }

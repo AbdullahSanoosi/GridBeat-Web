@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import type { RaceControlMessage, PitStop, TeamRadioMessage } from "@/lib/models/live";
 import { formattedPitDuration, pitStopTimeStr } from "@/lib/models/live";
+import { useRadioPlaybackStore } from "@/lib/live/radio-playback-store";
 
 const timeFormatter = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -102,7 +103,8 @@ export function PitStopsList({ stops }: { stops: PitStop[] }) {
 
 export function TeamRadioList({ messages }: { messages: TeamRadioMessage[] }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playingUrl, setPlayingUrl] = useState<string | null>(null);
+  const playingUrl = useRadioPlaybackStore((s) => s.playingUrl);
+  const setPlayingUrl = useRadioPlaybackStore((s) => s.setPlayingUrl);
 
   function toggle(url: string) {
     if (playingUrl === url) {

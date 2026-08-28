@@ -16,6 +16,7 @@ import { FastestLapOverlay } from "@/components/live/fastest-lap-overlay";
 import { TrackMap } from "@/components/live/track-map";
 import { TelemetryCompare } from "@/components/live/telemetry-compare";
 import { PlaybackControl } from "@/components/live/playback-control";
+import { CommentaryPlayer } from "@/components/live/commentary-player";
 
 const SECTOR_COLORS: Record<number, string> = {
   0: "var(--color-border)",
@@ -222,6 +223,7 @@ function LiveHeader({
           {connected ? "LIVE" : "OFFLINE"}
         </button>
         {mounted && <PlaybackControl />}
+        {mounted && <CommentaryPlayer />}
       </div>
     </div>
   );
