@@ -109,3 +109,293 @@ body {
 .animate-fastest-lap-in {
   animation: fastest-lap-in 0.3s ease-out;
 }
+
+/*
+ * First-load splash (components/layout/splash-screen.tsx) — an F1 starting-
+ * light gantry sequence into the wordmark, then a fade. Every element's
+ * animation is `forwards`-filled and independently timed via animation-delay
+ * against one shared clock, so the whole sequence needs no JS to
+ * orchestrate it:
+ *   0.10s–0.96s  5 panels ignite in turn, each panel's 2 bulbs igniting
+ *                together with a quick scale-pop (real gantries fire both
+ *                bulbs in a column at once, not one at a time)
+ *   1.50s        every panel blacks out simultaneously (opacity snap, not
+ *                a fade — matches the real start-lights blackout), at the
+ *                same instant a radial shockwave flash bursts outward and
+ *                5 speed-line streaks sweep across, selling the "GO"
+ *   1.85s–2.30s  GRIDBEAT wordmark scales/fades in with a letter-spacing
+ *                "converge" (starts wider-tracked, settles to final
+ *                tracking), tagline follows just after
+ *   2.90s–3.40s  the whole overlay fades out, then steps out of the way
+ *                (visibility + pointer-events) so it can't block clicks
+ *                on the dashboard beneath once it's invisible
+ */
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5rem;
+  overflow: hidden;
+  background: var(--color-background);
+  animation: splash-fade-out 0.5s ease-in forwards;
+  animation-delay: 2.9s;
+}
+
+.splash-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 55% at 50% 45%,
+    color-mix(in srgb, var(--color-primary) 22%, transparent),
+    transparent 70%
+  );
+}
+
+.splash-flash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140vmax;
+  height: 140vmax;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-error) 55%, white) 0%,
+    color-mix(in srgb, var(--color-primary) 45%, transparent) 30%,
+    transparent 65%
+  );
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.15);
+  animation: splash-flash-burst 0.6s ease-out forwards;
+  animation-delay: 1.5s;
+}
+
+.splash-speedlines {
+  position: absolute;
+  inset: 0;
+}
+
+.splash-speedline {
+  /* Each line's rotation is a custom property, not a hardcoded transform —
+     the sweep keyframes below reference var(--angle) at both their start
+     and end state, so the angle stays constant while only scaleX/opacity
+     animate. A plain `transform: rotate(Ndeg) scaleX(...)` per line would
+     get fully replaced (not merged) by the keyframes' own transform value,
+     collapsing every line to the same angle by the end of the animation. */
+  --angle: 0deg;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200vmax;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-text-primary) 70%, transparent) 45%,
+    color-mix(in srgb, var(--color-text-primary) 70%, transparent) 55%,
+    transparent
+  );
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(var(--angle)) scaleX(0.3);
+  animation: splash-speedline-sweep 0.55s ease-out forwards;
+  animation-delay: 1.52s;
+}
+.splash-speedline-0 {
+  --angle: -16deg;
+  margin-top: -110px;
+}
+.splash-speedline-1 {
+  --angle: -9deg;
+  margin-top: -55px;
+  animation-delay: 1.55s;
+}
+.splash-speedline-2 {
+  --angle: 0deg;
+  animation-delay: 1.5s;
+}
+.splash-speedline-3 {
+  --angle: 9deg;
+  margin-top: 55px;
+  animation-delay: 1.55s;
+}
+.splash-speedline-4 {
+  --angle: 16deg;
+  margin-top: 110px;
+  animation-delay: 1.58s;
+}
+
+.splash-rig {
+  display: flex;
+  gap: 1.5rem;
+  animation: splash-rig-out 0.01s step-end forwards;
+  animation-delay: 1.5s;
+}
+
+.splash-rig-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.55rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.splash-bulb {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background: var(--color-surface-elevated);
+  border: 2px solid var(--color-border);
+  animation: splash-bulb-ignite 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.splash-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.splash-wordmark {
+  font-size: 3.25rem;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  color: var(--color-text-primary);
+  text-shadow: 0 0 40px color-mix(in srgb, var(--color-primary) 55%, transparent);
+  opacity: 0;
+  transform: scale(0.92);
+  animation: splash-wordmark-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 1.85s;
+}
+
+.splash-tagline {
+  font-family: var(--font-f1);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.45em;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transform: translateY(6px);
+  animation: splash-tagline-in 0.35s ease-out forwards;
+  animation-delay: 2.15s;
+}
+
+@keyframes splash-bulb-ignite {
+  0% {
+    background: var(--color-surface-elevated);
+    border-color: var(--color-border);
+    box-shadow: none;
+    transform: scale(1);
+  }
+  55% {
+    background: var(--color-error);
+    border-color: var(--color-error);
+    box-shadow:
+      0 0 22px 6px color-mix(in srgb, var(--color-error) 75%, transparent),
+      0 0 44px 14px color-mix(in srgb, var(--color-primary) 45%, transparent);
+    transform: scale(1.22);
+  }
+  100% {
+    background: var(--color-error);
+    border-color: var(--color-error);
+    box-shadow:
+      0 0 22px 6px color-mix(in srgb, var(--color-error) 75%, transparent),
+      0 0 44px 14px color-mix(in srgb, var(--color-primary) 45%, transparent);
+    transform: scale(1);
+  }
+}
+
+@keyframes splash-rig-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes splash-flash-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.15);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes splash-speedline-sweep {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle)) scaleX(0.3);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle)) scaleX(1);
+  }
+}
+
+@keyframes splash-wordmark-in {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.9em;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: 0.5em;
+    transform: scale(1);
+  }
+}
+
+@keyframes splash-tagline-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splash-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* Respect reduced-motion: skip straight to the wordmark, hold briefly, fade. */
+@media (prefers-reduced-motion: reduce) {
+  .splash-overlay {
+    animation-duration: 0.3s;
+    animation-delay: 0.6s;
+  }
+  .splash-rig,
+  .splash-flash,
+  .splash-speedlines,
+  .splash-vignette {
+    display: none;
+  }
+  .splash-wordmark,
+  .splash-tagline {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+}

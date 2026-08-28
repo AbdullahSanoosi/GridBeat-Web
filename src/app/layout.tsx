@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Sidebar } from "@/components/layout/sidebar";
+import { SplashScreen } from "@/components/layout/splash-screen";
 
 export const metadata: Metadata = {
   title: {
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex">
+        <SplashScreen />
         <QueryProvider>
           <Sidebar />
           {/* min-w-0: flex items default to min-width:auto, so wide page

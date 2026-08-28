@@ -24,6 +24,63 @@ of hunting for that path.
 
 ## Status (update this section as work lands)
 
+**Done — first-load splash screen:** `src/components/layout/splash-screen.tsx`
++ the `.splash-*` keyframes in `globals.css` — an F1 starting-light-gantry
+sequence into the GRIDBEAT wordmark, then a fade. No Flutter equivalent to
+port from (the Flutter app has no splash screen at all — this is a fresh
+addition, not a port). Went through two passes: a first simple version (5
+single dots), then a redesign after the user watched it and asked for
+something "more sexy and grand." The current version: 5 light-gantry panels
+(each a housing with 2 stacked bulbs igniting together, not lone dots,
+matching real FIA start lights) ignite in turn, all black out
+simultaneously, and that blackout instant is sold with a radial shockwave
+flash burst plus 5 fanned speed-line streaks sweeping across; the wordmark
+then scales/fades in with a letter-spacing convergence (starts wide-tracked,
+settles to final tracking), followed by a tagline. Deliberately zero
+JavaScript: pure CSS animation on statically server-rendered markup in the
+root layout, specifically to paint instantly on first load with no
+dependency on hydration and no client state to get out of sync (sidesteps
+the hydration-mismatch bug class in gotcha #4 entirely, rather than needing
+another `useMounted()` gate). Lives above `{children}` in `layout.tsx`,
+which the App Router does not remount on client-side navigation, so it
+plays once per hard load/refresh only — confirmed by navigating away
+client-side after it finished and checking it stayed faded (didn't reset).
+Respects `prefers-reduced-motion`.
+
+A real bug was caught and fixed during the redesign, before it ever shipped:
+the speed-line sweep keyframe referenced an undefined `var(--tw, 0deg)`,
+which would have collapsed all 5 fanned streaks to the same angle by the
+end of their animation. Fixed by giving each line its own `--angle` custom
+property (`-16deg`/`-9deg`/`0deg`/`9deg`/`16deg`) referenced by both the
+base transform and the keyframe's 0%/100% transform — CSS keyframes replace
+the whole `transform` shorthand per keyframe rather than merging it, so the
+angle has to be threaded through as a variable rather than hardcoded per
+line, or the keyframe's own transform silently overwrites it. Confirmed
+fixed by decomposing each line's final animation-finished transform matrix
+back into an angle: line 0 → exactly -16°, line 4 → exactly +16°, etc.
+
+**Verification note:** this environment's lack of frame compositing (gotcha
+#6) affects CSS animations too, not just rAF/ResizeObserver/setInterval —
+animations attach correctly (`animationPlayState: running`, correct
+name/delay/duration/fill-mode) and the CSS itself parses with zero dropped
+declarations (checked via `document.styleSheets`), but visually never
+advances past frame 0 in this pane, and — a new finding this pass — `<video>`
+seeking is *also* broken here: scrubbing a locally-recorded screen capture
+to any timestamp always returned the same pre-navigation frame, across two
+different capture methods (canvas-drawImage-to-dataURL and
+canvas-toBlob-triggered-download), so a user-supplied recording couldn't be
+reviewed frame-by-frame in this session either — add "video seeking" to the
+gotcha #6 bucket alongside rAF/ResizeObserver/setInterval/CSS animations.
+Verified as much as is mechanically possible here instead: manually
+finished every animation via the Web Animations API (`el.getAnimations()
+[0].finish()`) and confirmed every end-state is exactly correct — all 10
+bulbs lit at `#D50000`, flash and speed-lines faded to 0 opacity with each
+line's angle intact, wordmark at full opacity/scale/final letter-spacing,
+tagline visible, overlay faded with `pointer-events: none`. The one thing
+that could not be verified here, on either pass, is the smooth in-between
+playback itself — the user confirmed the redesigned version looks good in
+their own real browser.
+
 **Done — Phase 0 (foundation):** Next.js 16 + TypeScript + Tailwind v4
 scaffold, TanStack Query data layer with localStorage persistence, design
 tokens ported from the Flutter app's `app_colors.dart`/`app_theme.dart`
@@ -400,7 +457,21 @@ directory for most of the session was the Flutter repo, not this one.
    correctness depends on a timer firing at its intended rate, verify the
    *mechanism* (e.g. does the action that's supposed to instantly clear a
    backlog actually clear it?) rather than the *steady-state rate* in this
-   pane, and note the gap for a real-browser recheck.
+   pane, and note the gap for a real-browser recheck. A fourth confirmed
+   member: plain CSS `@keyframes` animations (the splash screen's F1
+   starting lights, e.g.) attach correctly (`animationPlayState: running`,
+   correct name/delay/duration/fill-mode, CSS parses with zero dropped
+   declarations) but never visually advance past frame 0 here — same root
+   cause, no compositor frames being produced at all. `Element.getAnimations
+   ()[0].finish()` (Web Animations API) still works as a way to check an
+   animation's *end state* is correct without needing real frame
+   advancement — use that instead of trying to observe the animation play.
+   A fifth: `<video>` seeking is also broken — scrubbing a locally-recorded
+   screen capture to any timestamp returns the same pre-navigation frame
+   every time (confirmed across two capture methods), so a user-supplied
+   recording can't be reviewed frame-by-frame here either. If a user shares
+   a recording to show a bug/result, don't burn time trying to scrub it in
+   this pane — ask them to describe it or share stills instead.
 
 ---
 
