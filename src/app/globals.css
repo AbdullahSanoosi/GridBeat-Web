@@ -94,3 +94,18 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-f1), ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Fastest-lap overlay entrance (components/live/fastest-lap-overlay.tsx). */
+@keyframes fastest-lap-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fastest-lap-in {
+  animation: fastest-lap-in 0.3s ease-out;
+}

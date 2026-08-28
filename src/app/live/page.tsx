@@ -11,6 +11,8 @@ import {
 } from "@/lib/models/live";
 import { useMounted } from "@/hooks/use-mounted";
 import { RaceControlFeed, PitStopsList, TeamRadioList } from "@/components/live/comms";
+import { WeatherPanel } from "@/components/live/weather-panel";
+import { FastestLapOverlay } from "@/components/live/fastest-lap-overlay";
 
 const SECTOR_COLORS: Record<number, string> = {
   0: "var(--color-border)",
@@ -33,6 +35,7 @@ export default function LiveTimingPage() {
   const raceControl = useLiveTimingStore((s) => s.raceControl);
   const pitStops = useLiveTimingStore((s) => s.pitStops);
   const teamRadio = useLiveTimingStore((s) => s.teamRadio);
+  const weather = useLiveTimingStore((s) => s.weather);
   const connect = useLiveTimingStore((s) => s.connect);
   const reconnect = useLiveTimingStore((s) => s.reconnect);
   const [tab, setTab] = useState<"tower" | "comms">("tower");
@@ -48,6 +51,7 @@ export default function LiveTimingPage() {
 
   return (
     <main className="flex-1 px-8 py-8">
+      <FastestLapOverlay />
       <LiveHeader
         connected={mounted && connected}
         sessionName={mounted && sessionInfo ? grandPrixName(sessionInfo) : "LIVE TIMING"}
@@ -79,7 +83,12 @@ export default function LiveTimingPage() {
         </p>
       )}
 
-      {rows.length > 0 && tab === "tower" && <Tower rows={rows} />}
+      {rows.length > 0 && tab === "tower" && (
+        <div className="flex flex-col gap-4">
+          <Tower rows={rows} />
+          <WeatherPanel weather={weather} />
+        </div>
+      )}
 
       {tab === "comms" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
