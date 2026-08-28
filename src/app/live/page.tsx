@@ -62,6 +62,12 @@ export default function LiveTimingPage() {
         onReconnect={reconnect}
       />
 
+      {mounted && rows.length > 0 && (
+        <div className="mb-4">
+          <WeatherPanel weather={weather} />
+        </div>
+      )}
+
       {mounted && trackStatus.status !== "1" && (
         <div className="mb-4 rounded-lg bg-(--color-warning)/20 px-4 py-2 text-sm font-medium text-(--color-warning)">
           {trackStatus.message || `Track status ${trackStatus.status}`}
@@ -83,12 +89,7 @@ export default function LiveTimingPage() {
         </p>
       )}
 
-      {rows.length > 0 && tab === "tower" && (
-        <div className="flex flex-col gap-4">
-          <Tower rows={rows} />
-          <WeatherPanel weather={weather} />
-        </div>
-      )}
+      {rows.length > 0 && tab === "tower" && <Tower rows={rows} />}
 
       {tab === "comms" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
