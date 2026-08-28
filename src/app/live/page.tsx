@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLiveTimingStore } from "@/lib/live/store";
 import {
   activeSortedLeaderboard,
@@ -10,6 +10,7 @@ import {
   type LeaderboardEntry,
 } from "@/lib/models/live";
 import { useMounted } from "@/hooks/use-mounted";
+import { RaceControlFeed, PitStopsList, TeamRadioList } from "@/components/live/comms";
 
 const SECTOR_COLORS: Record<number, string> = {
   0: "var(--color-border)",
@@ -29,8 +30,12 @@ export default function LiveTimingPage() {
   const debugInfo = useLiveTimingStore((s) => s.debugInfo);
   const leaderboard = useLiveTimingStore((s) => s.leaderboard);
   const telemetry = useLiveTimingStore((s) => s.telemetry);
+  const raceControl = useLiveTimingStore((s) => s.raceControl);
+  const pitStops = useLiveTimingStore((s) => s.pitStops);
+  const teamRadio = useLiveTimingStore((s) => s.teamRadio);
   const connect = useLiveTimingStore((s) => s.connect);
   const reconnect = useLiveTimingStore((s) => s.reconnect);
+  const [tab, setTab] = useState<"tower" | "comms">("tower");
 
   useEffect(() => {
     connect();
@@ -59,14 +64,65 @@ export default function LiveTimingPage() {
         </div>
       )}
 
+      <div className="mb-4 flex rounded-full border border-(--color-border) p-1" style={{ width: "fit-content" }}>
+        <TabButton active={tab === "tower"} onClick={() => setTab("tower")}>
+          Tower
+        </TabButton>
+        <TabButton active={tab === "comms"} onClick={() => setTab("comms")}>
+          Comms
+        </TabButton>
+      </div>
+
       {mounted && rows.length === 0 && (
         <p className="text-(--color-text-secondary)">
           {connected ? (debugInfo ?? "Waiting for leaderboard…") : "Connecting to live timing…"}
         </p>
       )}
 
-      {rows.length > 0 && <Tower rows={rows} />}
+      {rows.length > 0 && tab === "tower" && <Tower rows={rows} />}
+
+      {tab === "comms" && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div>
+            <h2 className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">RACE CONTROL</h2>
+            <RaceControlFeed messages={raceControl} />
+          </div>
+          <div className="flex flex-col gap-6">
+            <div>
+              <h2 className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">PIT STOPS</h2>
+              <PitStopsList stops={pitStops} />
+            </div>
+            <div>
+              <h2 className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">TEAM RADIO</h2>
+              <TeamRadioList messages={teamRadio} />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+        active
+          ? "bg-(--color-primary) text-(--color-on-secondary)"
+          : "text-(--color-text-secondary) hover:text-(--color-text-primary)"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
