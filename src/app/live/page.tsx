@@ -13,6 +13,7 @@ import { useMounted } from "@/hooks/use-mounted";
 import { RaceControlFeed, PitStopsList, TeamRadioList } from "@/components/live/comms";
 import { WeatherPanel } from "@/components/live/weather-panel";
 import { FastestLapOverlay } from "@/components/live/fastest-lap-overlay";
+import { TrackMap } from "@/components/live/track-map";
 
 const SECTOR_COLORS: Record<number, string> = {
   0: "var(--color-border)",
@@ -38,7 +39,7 @@ export default function LiveTimingPage() {
   const weather = useLiveTimingStore((s) => s.weather);
   const connect = useLiveTimingStore((s) => s.connect);
   const reconnect = useLiveTimingStore((s) => s.reconnect);
-  const [tab, setTab] = useState<"tower" | "comms">("tower");
+  const [tab, setTab] = useState<"tower" | "comms" | "map">("tower");
 
   useEffect(() => {
     connect();
@@ -81,6 +82,9 @@ export default function LiveTimingPage() {
         <TabButton active={tab === "comms"} onClick={() => setTab("comms")}>
           Comms
         </TabButton>
+        <TabButton active={tab === "map"} onClick={() => setTab("map")}>
+          Map
+        </TabButton>
       </div>
 
       {mounted && rows.length === 0 && (
@@ -90,6 +94,8 @@ export default function LiveTimingPage() {
       )}
 
       {rows.length > 0 && tab === "tower" && <Tower rows={rows} />}
+
+      {tab === "map" && <TrackMap />}
 
       {tab === "comms" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

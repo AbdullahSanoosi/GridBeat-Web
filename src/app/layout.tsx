@@ -17,7 +17,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex">
         <QueryProvider>
           <Sidebar />
-          <div className="flex min-h-screen flex-1 flex-col">{children}</div>
+          {/* min-w-0: flex items default to min-width:auto, so wide page
+              content (e.g. the live-timing map's canvas) would otherwise
+              force this whole row wider than the viewport instead of being
+              contained/scrolled — and squeeze the sidebar down doing it. */}
+          <div className="flex min-h-screen min-w-0 flex-1 flex-col">{children}</div>
         </QueryProvider>
       </body>
     </html>
