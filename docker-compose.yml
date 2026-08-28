@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  gridbeat-web:
+    build: .
+    container_name: gridbeat-web
+    restart: always
+    network_mode: host
+    env_file:
+      - .env

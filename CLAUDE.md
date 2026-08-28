@@ -355,6 +355,123 @@ twitterapi.io directly.
 
 ---
 
+## Deployment (superseded plan below, then the actual decision)
+
+**GitHub:** pushed to `github.com/AbdullahSanoosi/GridBeat-Web` (note the
+repo name's casing differs from this local folder/npm package name —
+that's fine, they're unrelated identifiers; don't rename the local folder
+to "match", since this repo's own `.claude/launch.json` and the sibling
+Flutter repo's `../GridBeat/.claude/launch.json` both reference this exact
+folder name).
+
+**Superseded: Cloudflare Pages + OpenNext adapter.** The original plan
+(below, kept for context) was Cloudflare Pages with the OpenNext Cloudflare
+adapter. After a discussion with another AI about deployment options, the
+user redirected to self-hosting on the same VPS as the live API instead —
+see "Actual decision" below. The Pages/adapter risk this was meant to
+avoid (adapter lag behind a very recent Next.js release) is now moot since
+there's no adapter in the path at all.
+
+<details>
+<summary>Original Cloudflare Pages plan (not used)</summary>
+
+Host: Cloudflare Pages — decided over Vercel specifically because the user
+already runs the backend infra through Cloudflare: both
+`NEXT_PUBLIC_STATS_API_BASE_URL` (co-developer Sajjad's Oracle VPS) and
+`NEXT_PUBLIC_LIVE_API_BASE_URL`/`NEXT_PUBLIC_LIVE_WS_URL` (the user's own
+Oracle VPS) are fronted by Cloudflare Tunnels under domains the user
+already manages in the same Cloudflare account. Would have needed the
+[OpenNext Cloudflare adapter](https://opennext.js.org/cloudflare)
+(`@opennextjs/cloudflare`) since Next.js doesn't run on Cloudflare Workers
+out of the box.
+
+</details>
+
+**Actual decision: self-hosted via Docker on the same Oracle VPS as the
+live API.** SSH alias `f1box` (Oracle ARM/aarch64, Ubuntu 24.04, 2 vCPU,
+11GB RAM — idle/plenty of headroom; see `~/.ssh/config` if the alias needs
+re-adding on a new machine). This is the same box `gridbeat-backend`
+already runs on (`~/f1-backend` there, Docker Compose, `network_mode:
+host`, fronted by a **dashboard-managed** Cloudflare Tunnel — no local
+`/etc/cloudflared/config.yml` exists on the box; every hostname's ingress
+rule lives in the Cloudflare Zero Trust dashboard, not in a file this repo
+or that box controls). Reusing this box sidesteps the adapter-compatibility
+risk entirely (plain Node SSR via `next start`-equivalent, not Workers) and
+means one less piece of infra to operate — at the cost of the live API and
+the web dashboard now sharing a failure domain, and losing Cloudflare
+Pages' free edge CDN/preview-deploys (the tunnel hostname can still be
+orange-clouded through Cloudflare for caching if wanted later).
+
+**What's set up (this repo, all committed except deploy-time secrets):**
+- [next.config.ts](next.config.ts) — `output: "standalone"`.
+- [Dockerfile](Dockerfile) — multi-stage (`deps` → `builder` → `runner`),
+  `node:22-alpine` (multi-arch, works on the box's aarch64 without cross-
+  compiling), copies `.env.production` into the `builder` stage before
+  `next build` since `NEXT_PUBLIC_*` vars are inlined into the client
+  bundle at *build* time, not read at runtime. Runs as a non-root
+  `nextjs` user, `CMD ["node", "server.js"]` (the standalone-output
+  entrypoint).
+- [docker-compose.yml](docker-compose.yml) — mirrors `f1-backend`'s own
+  compose file: `container_name: gridbeat-web`, `restart: always`,
+  `network_mode: host`, `env_file: .env`. Host networking means the app
+  just binds `PORT=3000` directly on the box, same pattern as the backend
+  binding `8000`.
+- [.dockerignore](.dockerignore) — excludes `node_modules`, `.next`,
+  `.git`, `.env*`.
+
+**Env var split (don't collapse these into one file):**
+- `.env.production` — the `NEXT_PUBLIC_*` public vars only. Not committed
+  (gitignored like `.env.local`), lives only on the VPS at
+  `~/gridbeat-web/.env.production`, copied into the Docker **build**
+  context so `next build` bakes them into the client bundle. No secrets in
+  here, so baking them into image layers is fine.
+- `.env` — just `TWITTER_API_KEY` (the one real secret). Also VPS-only,
+  referenced by `docker-compose.yml`'s `env_file:` so it's supplied to the
+  container's `process.env` at **runtime** only — never baked into an
+  image layer, same spirit as the security note on the X-posts proxy
+  above.
+
+**How code got onto the box:** NOT via `git clone` from GitHub — the
+working tree was packaged locally with `tar` (excluding
+`node_modules`/`.next`/`.git`/`.env*`) and `scp`'d straight into
+`~/gridbeat-web` on `f1box`, since the repo's `origin` push wasn't part of
+this deploy and there was no reason to require it. This means **the VPS
+copy will drift from GitHub** on the next code change unless you either
+re-run the same tar/scp steps or switch the box over to `git pull` — pick
+one deliberately next time rather than mixing both.
+
+**Build note:** this box's Docker (29.1.3) does **not** have the `docker
+compose` plugin subcommand — only the legacy standalone `docker-compose`
+binary at `/usr/bin/docker-compose`. Use `sudo docker-compose build` /
+`sudo docker-compose up -d` in `~/gridbeat-web` on the box, not `docker
+compose`.
+
+**Verified:** `sudo docker-compose build` completed clean (Next.js 16.3.3,
+Turbopack, all 14 routes compiled, TypeScript passed). Container
+`gridbeat-web` is up; `curl http://localhost:3000/` on the box returns a
+307 to `/schedule` (the app's intentional root redirect) which then
+resolves 200 — confirmed via `curl -L`. Not yet checked in a real browser
+against the public hostname (that needs the Cloudflare-side step below
+first).
+
+**Not yet done (Cloudflare side — dashboard-only, needs the user):** add a
+**Public Hostname** entry on the *same tunnel* already running on `f1box`
+(the one currently serving `api.5928104.xyz` → `localhost:8000` and
+`test.5928104.xyz` → `localhost:8001`), for:
+- `webapp.5928104.xyz` → `http://localhost:3000` — temporary testing
+  hostname, same domain the live API already uses. A real domain will
+  replace this at release time (not chosen yet); when that happens, add
+  the new hostname the same way rather than assuming DNS/tunnel work
+  carries over automatically.
+
+The Cloudflare Access plan from the original write-up (free tier, up to 50
+users, email allowlist during private beta, delete the policy to go public
+later) is unchanged by this pivot — Access sits in front of a tunnel
+hostname regardless of what's behind it, so it applies the same way to
+`webapp.5928104.xyz` as it would have to a Pages deployment.
+
+---
+
 ## Environment setup
 
 `.env.local` is gitignored (has real secrets) — copy `.env.example` and fill
