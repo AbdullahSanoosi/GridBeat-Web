@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { getDriverHallOfFame, getConstructorHallOfFame } from "@/lib/models/hall-of-fame";
 import { staleTime } from "@/lib/query/ttl";
@@ -105,7 +106,11 @@ function DriverTable({ rows }: { rows: HallOfFameDriver[] }) {
               key={r.driverId}
               className="border-b border-(--color-divider) last:border-0 hover:bg-(--color-surface-elevated)"
             >
-              <td className="px-4 py-3 font-medium">{r.name}</td>
+              <td className="px-4 py-3 font-medium">
+                <Link href={`/driver/${r.driverId}`} className="hover:text-(--color-primary)">
+                  {r.name}
+                </Link>
+              </td>
               <td className="px-4 py-3 text-(--color-text-secondary)">{r.nationality || "—"}</td>
               <td className="px-4 py-3 text-right">{r.titles > 0 ? r.titles : "—"}</td>
               <td className="px-4 py-3 text-right text-(--color-text-secondary)">{r.wins}</td>
@@ -139,7 +144,11 @@ function ConstructorTable({ rows }: { rows: HallOfFameConstructor[] }) {
               key={r.constructorId}
               className="border-b border-(--color-divider) last:border-0 hover:bg-(--color-surface-elevated)"
             >
-              <td className="px-4 py-3 font-medium">{r.name}</td>
+              <td className="px-4 py-3 font-medium">
+                <Link href={`/constructor/${r.constructorId}`} className="hover:text-(--color-primary)">
+                  {r.name}
+                </Link>
+              </td>
               <td className="px-4 py-3 text-right">{r.titles > 0 ? r.titles : "—"}</td>
               <td className="px-4 py-3 text-right text-(--color-text-secondary)">{r.wins}</td>
               <td className="px-4 py-3 text-right text-(--color-text-secondary)">{r.podiums}</td>

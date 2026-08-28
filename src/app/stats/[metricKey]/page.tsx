@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { getComputedStats, getEntityNames } from "@/lib/api/stats-api";
 import { staleTime } from "@/lib/query/ttl";
@@ -60,7 +61,7 @@ export default function StatsLeaderboardPage({
           Failed to load: {statsQuery.error instanceof Error ? statsQuery.error.message : String(statsQuery.error)}
         </p>
       ) : (
-        <Leaderboard stats={statsQuery.data ?? []} names={namesQuery.data ?? {}} />
+        <Leaderboard stats={statsQuery.data ?? []} names={namesQuery.data ?? {}} entityType={entityType} />
       )}
     </main>
   );
@@ -69,37 +70,49 @@ export default function StatsLeaderboardPage({
 function Leaderboard({
   stats,
   names,
+  entityType,
 }: {
   stats: ComputedStat[];
   names: Record<string, string>;
+  entityType: string;
 }) {
   if (stats.length === 0) {
     return <p className="text-(--color-text-muted)">No data for this metric yet.</p>;
   }
   const maxValue = Math.max(...stats.map((s) => Math.abs(s.value)));
+  const linkable = entityType === "driver" || entityType === "constructor";
 
   return (
     <div className="flex flex-col gap-2">
-      {stats.map((stat, i) => (
-        <div
-          key={stat.entityId}
-          className="flex items-center gap-4 rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-3"
-        >
-          <span className="w-6 shrink-0 text-right text-sm text-(--color-text-muted)">{i + 1}</span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium">
-              {entityDisplayName(stat.entityId, names)}
+      {stats.map((stat, i) => {
+        const name = entityDisplayName(stat.entityId, names);
+        return (
+          <div
+            key={stat.entityId}
+            className="flex items-center gap-4 rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-3"
+          >
+            <span className="w-6 shrink-0 text-right text-sm text-(--color-text-muted)">{i + 1}</span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium">
+                {linkable ? (
+                  <Link href={`/${entityType}/${stat.entityId}`} className="hover:text-(--color-primary)">
+                    {name}
+                  </Link>
+                ) : (
+                  name
+                )}
+              </div>
+              <div className="mt-1 h-1 rounded-full bg-(--color-surface-elevated)">
+                <div
+                  className="h-1 rounded-full bg-(--color-primary)"
+                  style={{ width: `${maxValue > 0 ? (Math.abs(stat.value) / maxValue) * 100 : 0}%` }}
+                />
+              </div>
             </div>
-            <div className="mt-1 h-1 rounded-full bg-(--color-surface-elevated)">
-              <div
-                className="h-1 rounded-full bg-(--color-primary)"
-                style={{ width: `${maxValue > 0 ? (Math.abs(stat.value) / maxValue) * 100 : 0}%` }}
-              />
-            </div>
+            <span className="shrink-0 text-right text-sm font-semibold tabular-nums">{stat.value}</span>
           </div>
-          <span className="shrink-0 text-right text-sm font-semibold tabular-nums">{stat.value}</span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { getDriverStandings, getConstructorStandings } from "@/lib/api/stats-api";
 import { staleTime } from "@/lib/query/ttl";
@@ -111,16 +112,20 @@ function DriverStandingsTable({ rows }: { rows: DriverStanding[] }) {
               className="border-b border-(--color-divider) last:border-0 hover:bg-(--color-surface-elevated)"
             >
               <td className="px-4 py-3 text-(--color-text-muted)">{row.position}</td>
-              <td className="px-4 py-3 font-medium">{driverFullName(row.driver)}</td>
+              <td className="px-4 py-3 font-medium">
+                <Link href={`/driver/${row.driver.driverId}`} className="hover:text-(--color-primary)">
+                  {driverFullName(row.driver)}
+                </Link>
+              </td>
               <td className="px-4 py-3">
                 {row.constructor && (
-                  <span className="inline-flex items-center gap-2">
+                  <Link href={`/constructor/${row.constructor.constructorId}`} className="inline-flex items-center gap-2 hover:text-(--color-primary)">
                     <span
                       className="h-2.5 w-2.5 rounded-full"
                       style={{ backgroundColor: teamColor(row.constructor.name) }}
                     />
                     <span className="text-(--color-text-secondary)">{row.constructor.name}</span>
-                  </span>
+                  </Link>
                 )}
               </td>
               <td className="px-4 py-3 text-right text-(--color-text-secondary)">{row.wins}</td>
@@ -153,13 +158,13 @@ function ConstructorStandingsTable({ rows }: { rows: ConstructorStanding[] }) {
             >
               <td className="px-4 py-3 text-(--color-text-muted)">{row.position}</td>
               <td className="px-4 py-3 font-medium">
-                <span className="inline-flex items-center gap-2">
+                <Link href={`/constructor/${row.constructor.constructorId}`} className="inline-flex items-center gap-2 hover:text-(--color-primary)">
                   <span
                     className="h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: teamColor(row.constructor.name) }}
                   />
                   {row.constructor.name}
-                </span>
+                </Link>
               </td>
               <td className="px-4 py-3 text-right text-(--color-text-secondary)">{row.wins}</td>
               <td className="px-4 py-3 text-right font-semibold">{row.points}</td>
