@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation";
  * as each route lands; only link routes that actually exist.
  */
 const NAV_ITEMS = [
+  { href: "/live", label: "Live Timing" },
   { href: "/schedule", label: "Schedule" },
   { href: "/standings", label: "Standings" },
   { href: "/results", label: "Race Archives" },
