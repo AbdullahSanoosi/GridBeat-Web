@@ -17,6 +17,12 @@ import { TrackMap } from "@/components/live/track-map";
 import { TelemetryCompare } from "@/components/live/telemetry-compare";
 import { PlaybackControl } from "@/components/live/playback-control";
 import { CommentaryPlayer } from "@/components/live/commentary-player";
+import { BackendPanel } from "@/components/dev/backend-panel";
+
+// Literal env expression (not an imported boolean) so Next.js's build-time
+// inlining + minifier DCE can actually fold this branch away in the real
+// production build — see src/lib/dev/dev-store.ts's module docstring.
+const DEV_CONTROLS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_DEV_CONTROLS === "true";
 
 const SECTOR_COLORS: Record<number, string> = {
   0: "var(--color-border)",
@@ -224,6 +230,7 @@ function LiveHeader({
         </button>
         {mounted && <PlaybackControl />}
         {mounted && <CommentaryPlayer />}
+        {mounted && DEV_CONTROLS_ENABLED && <BackendPanel />}
       </div>
     </div>
   );

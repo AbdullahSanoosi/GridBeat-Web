@@ -4,7 +4,7 @@
  * intentional-close guard so a manual disconnect never triggers reconnect,
  * silently drops Heartbeat frames.
  */
-import { config } from "@/lib/config";
+import { activeLiveWsUrl } from "@/lib/dev/dev-store";
 
 export type WsConnectionState = "disconnected" | "connecting" | "connected" | "error";
 
@@ -43,7 +43,7 @@ export class LiveWebSocketClient {
 
     let socket: WebSocket;
     try {
-      socket = new WebSocket(config.liveWsUrl);
+      socket = new WebSocket(activeLiveWsUrl());
     } catch {
       this.emitState("error");
       this.scheduleReconnect();

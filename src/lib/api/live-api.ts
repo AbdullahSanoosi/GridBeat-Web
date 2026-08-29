@@ -5,7 +5,7 @@
  * devices") — that workaround is mobile-specific and doesn't apply in a
  * browser, so this is plain fetch throughout.
  */
-import { config } from "@/lib/config";
+import { activeLiveApiBaseUrl } from "@/lib/dev/dev-store";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = any;
@@ -16,7 +16,7 @@ async function get(path: string, query: Record<string, string | number | undefin
     if (value !== undefined) params.set(key, String(value));
   }
   const qs = params.toString();
-  const url = `${config.liveApiBaseUrl}${path}${qs ? `?${qs}` : ""}`;
+  const url = `${activeLiveApiBaseUrl()}${path}${qs ? `?${qs}` : ""}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`live-api ${path} failed: ${res.status} ${res.statusText}`);
   return res.json();
