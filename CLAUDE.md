@@ -275,6 +275,86 @@ all suspect in this pane). Re-verify the catch-up-rate behavior specifically
 in a real, focused browser tab before trusting it under genuinely heavy
 message load.
 
+**Done — 3D track map, Phase 1 (Live Timing → Map tab):** replaced the flat
+Canvas 2D map with a react-three-fiber WebGL scene. This was a user
+request ("more sexy and grand... like a 3D") after reviewing the old
+implementation; researched three-.js/R3F vs. deck.gl+MapLibre vs. a fake-
+isometric-canvas approach and went with R3F because MultiViewer's track
+`{x,y}` (and the live WS's `PositionSample.x/y` — same coordinate space)
+are local, circuit-relative units with an arbitrary origin/scale, not
+geographic — a real-world geo basemap would need an unsolved per-circuit
+local→lat/lng calibration with no clean data path found, so it was ruled
+out. Pure render-layer swap: `useLiveTimingStore` selectors
+(`sessionInfo`/`trackDots`/`positionHistory`/`carPositions`/`leaderboard`)
+and `fetchTrackData()` in `lib/api/multiviewer.ts` are all untouched.
+`src/components/live/track-map.tsx` (single file) → `src/components/live/
+track-map/` (folder): `geometry.ts` (normalizes any circuit's points into a
+fixed-size world — longest bounding-box dimension → 40 units, centered at
+origin — so camera/car-size/line-width constants are circuit-independent;
+builds the ribbon as a triangle-strip `BufferGeometry` via finite-
+difference tangents + perpendicular offsets around a closed
+`CatmullRomCurve3`), `use-playhead-positions.ts` (the old canvas version's
+"virtual playhead" interpolation algorithm — bootstrap runway, resync
+threshold, per-driver sample queue + GC — ported nearly verbatim, just
+returning positions to a caller instead of driving a canvas redraw
+itself), `track-ribbon.tsx` (the extruded track + corner markers),
+`car-markers.tsx` (one emissive sphere + contact-shadow disc + billboarded
+label per driver, positions written straight to each mesh's ref inside
+`useFrame` — never through React state, matching the old code's discipline
+of not re-rendering every animation frame), `scene.tsx` (the `<Canvas>`
+root: tilted `PerspectiveCamera`, drei `OrbitControls` replacing the old
+manual pan/zoom math, ambient+directional lighting, a dark ground plane,
+subtle fog), `index.tsx` (client entry — container + reset-view button +
+`next/dynamic(() => import("./scene"), { ssr:false })` so three.js/fiber/
+drei, a meaningful bundle-weight addition, only loads once a user actually
+opens the Map tab, same discipline as `commentary-player.tsx`'s lazy
+`import("hls.js")`). New deps: `three`, `@react-three/fiber@^9` (the
+React-19-compatible line — confirmed against this project's
+`react@19.2.8`; v8 pairs with React 18), `@react-three/drei`.
+
+**A genuinely new, stricter member of gotcha #6 below, found while
+verifying this:** in this sandbox, a react-three-fiber `<Canvas>` cannot
+render *even a single frame* — not just "playback doesn't visually
+advance" like the old 2D canvas/CSS-animation cases, but frame zero itself
+never paints, because R3F's whole render loop (including its first frame)
+is scheduled via `requestAnimationFrame`, which never fires here at all;
+unlike the hand-rolled 2D canvas code, there's no hook to force one
+synchronous initial paint since R3F fully owns that loop internally. Two
+knock-on findings from the same root cause, both confirmed directly: R3F's
+canvas-sizing (via an internal `ResizeObserver`-based measure hook) also
+never applies on mount for the same reason — the canvas stayed stuck at
+the default 300×150 until a manual `window.dispatchEvent(new
+Event('resize'))` forced it, at which point it correctly picked up the
+real 959×598 container size (proving the component itself is correct, and
+that R3F does have a `window`-resize-driven fallback path independent of
+the broken `ResizeObserver` path) — and `useFrame` callbacks (which is
+where the ported interpolation engine lives) never ran either, so car
+marker groups stayed at their initial `visible={false}`/`position (0,0,0)`
+state throughout testing here. **Verified as much as is mechanically
+possible given that:** temporarily added an `onCreated` prop to `<Canvas>`
+exposing `{ scene, camera, gl }` on `window` (removed before finishing,
+never shipped) and walked the live Three.js scene graph directly — real
+track geometry present (5,312-vertex closed ribbon, exact `#2E3133`
+asphalt color match), corner markers with number labels, and all 23 driver
+groups present with correct team colors sourced from the live feed (not
+the static `colors.ts` table — `teamColorHex` reads the WS's own per-driver
+hex, which is why values differ slightly from `colors.ts`'s hardcoded
+list). `npx tsc --noEmit`, `npm run lint`, and `npm run build` all clean.
+**Not verified here, same as every other rAF-dependent feature in this
+project:** the actual visual result — camera framing, car movement,
+whether the "sexy and grand" bar is met — needs the user's real browser,
+where `requestAnimationFrame` fires normally and none of the above applies.
+
+**Deferred to a later pass (not started):** Phase 2 — glow/trail polish
+(drei `<Trail>`), a real DRS-active visual state per car (backed by actual
+data — `drsActive()` in `lib/models/live.ts` already exists), corner-label
+styling. Phase 3 (contingent/uncertain) — sector-colored track segments or
+static DRS-zone markers, gated on whether MultiViewer's raw circuit JSON
+actually contains marshal-sector/DRS-zone boundaries (not yet inspected);
+a "follow driver" camera mode. Full plan at
+`C:\Users\Abdullah Sanoosi\.claude\plans\swirling-wiggling-emerson.md` if
+still reachable.
+
 **Not started yet:**
 - 3D Car Viewer, Learn F1/Evolution — explicitly out of scope per the
   original plan (mobile-only / lower priority; see that plan file if it's
@@ -454,21 +534,54 @@ resolves 200 — confirmed via `curl -L`. Not yet checked in a real browser
 against the public hostname (that needs the Cloudflare-side step below
 first).
 
-**Not yet done (Cloudflare side — dashboard-only, needs the user):** add a
-**Public Hostname** entry on the *same tunnel* already running on `f1box`
-(the one currently serving `api.5928104.xyz` → `localhost:8000` and
-`test.5928104.xyz` → `localhost:8001`), for:
-- `webapp.5928104.xyz` → `http://localhost:3000` — temporary testing
-  hostname, same domain the live API already uses. A real domain will
-  replace this at release time (not chosen yet); when that happens, add
-  the new hostname the same way rather than assuming DNS/tunnel work
-  carries over automatically.
+**Done — Cloudflare Public Hostname:** `webapp.5928104.xyz` → `http://localhost:3000`
+added to the same tunnel (`f1-tunnel`) already serving `api.5928104.xyz` and
+`test.5928104.xyz` (4 routes total on that tunnel now — nowhere near
+Cloudflare's account-wide cap of 1,000 routes / 1,000 tunnels, and route
+*count* on one tunnel doesn't itself cost performance — `cloudflared`
+multiplexes all hostnames over the same persistent edge connections
+regardless of how many ingress rules exist). DNS didn't auto-create on the
+first attempt (NXDOMAIN from both 1.1.1.1 and 8.8.8.8 right after adding the
+hostname in the dashboard) but resolved correctly on retry. Verified in a
+real browser against the public hostname: `/` → 307 → `/schedule` → 200,
+real 2026 season data rendering, zero console errors, `Server: cloudflare`
+header confirming it's actually going through the edge, not a direct hit.
+A real domain will replace this at release time (not chosen yet); when that
+happens, add the new hostname the same way rather than assuming DNS/tunnel
+work carries over automatically.
 
 The Cloudflare Access plan from the original write-up (free tier, up to 50
 users, email allowlist during private beta, delete the policy to go public
 later) is unchanged by this pivot — Access sits in front of a tunnel
 hostname regardless of what's behind it, so it applies the same way to
 `webapp.5928104.xyz` as it would have to a Pages deployment.
+
+**Resource headroom check (f1box is shared with the live API):** pulled
+`sar` history (sysstat, already running on the box, 10-min samples) for the
+Dutch GP race day (2026-08-23, the last real live session) to see what a
+live session actually costs this 2 vCPU/11GB box, before gridbeat-web
+existed. During the ~13:00–15:20 UTC race window: CPU never dropped below
+~94.5% idle (backend peaked around 5.5% of the 2 vCPUs), memory stayed at
+3.8–5% used the entire time, network peaked at ~25 kB/s tx. All three
+nowhere near a ceiling — the live backend's own footprint is a small
+fraction of this box's capacity, so gridbeat-web sharing the box isn't a
+near-term concern. `sysstat`'s `HISTORY` was bumped from the default 7 days
+to 31 (`/etc/sysstat/sysstat` on the box) so this kind of retrospective
+check stays possible for longer.
+
+**Ongoing per-container monitoring (set up 2026-08-28, ahead of the Spanish
+GP on 2026-09-13):** `~/monitor/docker-stats-log.sh` on `f1box` appends a
+timestamped `docker stats --no-stream` snapshot (CPU%, mem, net I/O) for
+every running container to `~/monitor/docker-stats.csv`, run every minute
+by the `docker-stats.timer` systemd timer (mirrors the existing
+`sysstat-collect.timer` pattern already on the box). Runs as the `ubuntu`
+user via passwordless sudo (already configured on this box — confirmed with
+`sudo -n true`), so it needs no interactive auth. Log rotates weekly via
+`/etc/logrotate.d/docker-stats` (8 weeks kept, compressed). This gives a
+per-container breakdown (gridbeat-web vs. f1-live-timing specifically,
+unlike system-wide `sar`) to check after any future race weekend — ask
+Claude to pull and summarize `~/monitor/docker-stats.csv` for the relevant
+time window rather than re-deriving this setup from scratch.
 
 ---
 
@@ -588,7 +701,22 @@ directory for most of the session was the Flutter repo, not this one.
    every time (confirmed across two capture methods), so a user-supplied
    recording can't be reviewed frame-by-frame here either. If a user shares
    a recording to show a bug/result, don't burn time trying to scrub it in
-   this pane — ask them to describe it or share stills instead.
+   this pane — ask them to describe it or share stills instead. A sixth,
+   found while building the 3D track map: a react-three-fiber `<Canvas>`
+   can't render even *one* frame here (stricter than the plain-canvas/CSS
+   cases above, which could at least force a synchronous first paint) —
+   R3F's whole render loop, including frame zero, is scheduled via rAF
+   internally with no hook to bypass it. Its `ResizeObserver`-based
+   auto-sizing is also silent here, but does have a `window`-resize
+   fallback path that isn't broken — dispatching a synthetic
+   `window.dispatchEvent(new Event('resize'))` after mount correctly
+   triggers R3F to measure and resize the canvas to its real container
+   size, which is a useful unstick if a WebGL canvas seems stuck at the
+   default 300×150. To verify a Three.js scene's *contents* here (as
+   opposed to its rendered pixels), temporarily wire `<Canvas onCreated=
+   {(state) => { window.__debug = state }}>`, walk `state.scene.traverse()`
+   to inspect real geometry/materials/positions, then remove the hook
+   before finishing — don't leave it shipped.
 
 ---
 

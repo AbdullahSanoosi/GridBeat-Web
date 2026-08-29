@@ -13,6 +13,13 @@ export interface Corner {
 export interface TrackData {
   points: { x: number; y: number }[];
   corners: Corner[];
+  /**
+   * Marshal-post boundaries (flag/marshaling posts, not DRS zones — the
+   * MultiViewer circuit API has no DRS-zone field at all, confirmed by
+   * inspecting a live response). Same shape as `corners`, reused for
+   * track-segment marker rendering.
+   */
+  marshalSectors: Corner[];
   /** Rotation in degrees from the circuit API, applied when drawing. */
   rotation: number;
 }
@@ -65,7 +72,13 @@ function trackDataFromJson(j: any): TrackData {
     x: c.trackPosition.x,
     y: c.trackPosition.y,
   }));
-  return { points, corners, rotation: j.rotation ?? 0 };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const marshalSectors: Corner[] = (j.marshalSectors ?? []).map((c: any) => ({
+    number: c.number,
+    x: c.trackPosition.x,
+    y: c.trackPosition.y,
+  }));
+  return { points, corners, marshalSectors, rotation: j.rotation ?? 0 };
 }
 
 /** Walks back up to 8 years — most circuits only have data through 2022/2023. */

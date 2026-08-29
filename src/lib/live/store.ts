@@ -785,8 +785,14 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
         trackDots: dots,
         positionHistory: posHistory,
         teamRadio: radio,
-        currentLap: toIntOrNull(lapCountData.CurrentLap),
-        totalLaps: toIntOrNull(lapCountData.TotalLaps),
+        // Same preserve-unless-session-changed pattern as audioStreams above —
+        // this snapshot path runs on every WS reconnect, not just a genuine
+        // new session, and the reconnect snapshot's LapCount can lack
+        // TotalLaps (sent once early, not necessarily re-included later),
+        // which was wiping the header's lap counter to null on any reconnect
+        // mid-session even though nothing about the session actually changed.
+        currentLap: toIntOrNull(lapCountData.CurrentLap) ?? (sessionChanged ? null : get().currentLap),
+        totalLaps: toIntOrNull(lapCountData.TotalLaps) ?? (sessionChanged ? null : get().totalLaps),
         qualifyingPart: qPart,
         stewardStatuses: deriveStewardStatuses(rcMessages),
         debugInfo: null,
