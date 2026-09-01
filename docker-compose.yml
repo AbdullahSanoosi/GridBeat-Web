@@ -1,9 +1,31 @@
 version: '3.8'
+
+# gridbeat-web (prod, dashboard.gridbeat.app) and gridbeat-web-staging
+# (webapp.5928104.xyz) run as separate containers on separate ports so a
+# staging rebuild never restarts/downs the container production traffic is
+# hitting. Always target one service by name when building/restarting
+# (`docker-compose up -d --build gridbeat-web-staging`) — a bare
+# `docker-compose up -d --build` with no service name rebuilds and restarts
+# BOTH, which defeats the isolation this split exists for.
 services:
   gridbeat-web:
     build: .
+    image: gridbeat-web:stable
     container_name: gridbeat-web
     restart: always
     network_mode: host
+    environment:
+      - PORT=3000
+    env_file:
+      - .env
+
+  gridbeat-web-staging:
+    build: .
+    image: gridbeat-web:staging
+    container_name: gridbeat-web-staging
+    restart: always
+    network_mode: host
+    environment:
+      - PORT=3001
     env_file:
       - .env
