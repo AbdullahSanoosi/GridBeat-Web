@@ -687,12 +687,16 @@ twitterapi.io directly.
 
 ## Deployment (superseded plan below, then the actual decision)
 
-**GitHub:** pushed to `github.com/AbdullahSanoosi/GridBeat-Web` (note the
-repo name's casing differs from this local folder/npm package name —
-that's fine, they're unrelated identifiers; don't rename the local folder
-to "match", since this repo's own `.claude/launch.json` and the sibling
-Flutter repo's `../GridBeat/.claude/launch.json` both reference this exact
-folder name).
+**GitHub:** `git remote -v` is the authority, not this note — it currently
+resolves to `github.com/CodesBySA/GridBeat-Web`, not the
+`AbdullahSanoosi/GridBeat-Web` this line originally named (the repo moved
+accounts/orgs at some point with no local record of when or why; if `git
+remote -v` shows a third value later, trust that over either name written
+here). The local folder/npm package name casing still differs from
+whatever the repo is called on GitHub — that's fine, they're unrelated
+identifiers; don't rename the local folder to "match", since this repo's
+own `.claude/launch.json` and the sibling Flutter repo's
+`../GridBeat/.claude/launch.json` both reference this exact folder name.
 
 **Superseded: Cloudflare Pages + OpenNext adapter.** The original plan
 (below, kept for context) was Cloudflare Pages with the OpenNext Cloudflare
@@ -761,28 +765,78 @@ orange-clouded through Cloudflare for caching if wanted later).
   image layer, same spirit as the security note on the X-posts proxy
   above.
 
-**How code got onto the box:** NOT via `git clone` from GitHub — the
-working tree was packaged locally with `tar` (excluding
-`node_modules`/`.next`/`.git`/`.env*`) and `scp`'d straight into
-`~/gridbeat-web` on `f1box`, since the repo's `origin` push wasn't part of
-this deploy and there was no reason to require it. This means **the VPS
-copy will drift from GitHub** on the next code change unless you either
-re-run the same tar/scp steps or switch the box over to `git pull` — pick
-one deliberately next time rather than mixing both.
+**How code got onto the box (superseded — see "Prod/staging split" below):**
+the very first deploy was NOT via `git clone` — the working tree was
+packaged locally with `tar` and `scp`'d straight into `~/gridbeat-web` on
+`f1box`. That's no longer how this works: `~/gridbeat-web` on the box is
+now a real `git` checkout of `origin` (`github.com/CodesBySA/GridBeat-Web`
+— note this is a *different* GitHub account/URL than the one named earlier
+in this file when the repo was first pushed; the box's `git remote -v` is
+the authority if the two ever look inconsistent again), updated with a
+plain `git pull`. Don't reintroduce the tar/scp path — it's exactly the
+drift this note used to warn about.
 
-**Build note:** this box's Docker (29.1.3) does **not** have the `docker
-compose` plugin subcommand — only the legacy standalone `docker-compose`
-binary at `/usr/bin/docker-compose`. Use `sudo docker-compose build` /
-`sudo docker-compose up -d` in `~/gridbeat-web` on the box, not `docker
-compose`.
+**Build note (corrected):** the box's Docker was upgraded at some point
+after the note below was written — it now has the real `docker compose`
+plugin (v2.40.3), not just the legacy standalone `docker-compose` binary.
+Use `sudo docker compose build <service>` / `sudo docker compose up -d
+<service>` (space, no hyphen). The old advice to use hyphenated
+`docker-compose` is stale; harmless if it still works, but don't be
+surprised if a future box only has the plugin form.
 
-**Verified:** `sudo docker-compose build` completed clean (Next.js 16.3.3,
+**Verified (original single-service deploy, kept for history):**
+`sudo docker-compose build` completed clean (Next.js 16.3.3,
 Turbopack, all 14 routes compiled, TypeScript passed). Container
 `gridbeat-web` is up; `curl http://localhost:3000/` on the box returns a
 307 to `/schedule` (the app's intentional root redirect) which then
 resolves 200 — confirmed via `curl -L`. Not yet checked in a real browser
 against the public hostname (that needs the Cloudflare-side step below
 first).
+
+### Prod/staging split (superseding update — done in a session with no local record)
+
+At some point after the above was written, `docker-compose.yml` was split
+into two services — found by reading the file directly on the box, since
+nothing in this repo's own history documented it until now:
+
+| Service | Image | Port | Hostname | Container |
+|---|---|---|---|---|
+| `gridbeat-web` | `gridbeat-web:stable` | 3000 | `dashboard.gridbeat.app` | production |
+| `gridbeat-web-staging` | `gridbeat-web:staging` | 3002 (3001 was already `uptime-kuma`) | `webapp.5928104.xyz` | test |
+
+**`webapp.5928104.xyz` is the test environment**, not production — the
+name is a holdover from when there was only one deployment. The compose
+file's own top comment is the load-bearing rule: **always target one
+service by name**. `sudo docker compose build gridbeat-web-staging` +
+`sudo docker compose up -d gridbeat-web-staging` releases to test only; a
+bare `up -d --build` with no service name rebuilds and restarts *both*,
+which would bounce production traffic for a staging change. There is no
+promote-to-prod automation — moving staging's image to production is a
+manual, deliberate step (rebuild `gridbeat-web` the same way once staging
+looks right), not something to script casually.
+
+**`test.5928104.xyz` (mentioned above as one of the tunnel's other routes)
+is unrelated to this split** — confirmed by reading `.env.production` on
+the box: it's `NEXT_PUBLIC_REPLAY_API_BASE_URL`/`_REPLAY_WS_URL`, the
+`f1-backend-replay` container's own hostname (a replay/dev-tools backend
+for the live-timing page's dev controls), not a second gridbeat-web
+deployment. Don't confuse the two when "test" comes up — ask which one is
+meant if it's ambiguous.
+
+**Released 2026-09-02:** pushed the session's full backlog (Phase 3.8
+verification, Learn F1 hub + Evolution + Penalties, per-route metadata,
+loading skeletons, the navbar logo fix — 15 commits, 137 files) through
+`origin/master` → `git pull` on the box → `docker compose build
+gridbeat-web-staging` → `docker compose up -d gridbeat-web-staging`.
+Verified: build compiled clean (TS passed, all 21 routes), production
+container untouched (`gridbeat-web`, still "Up 16 hours" — never
+recreated), and `https://webapp.5928104.xyz/learn` /`/learn/penalties`
+confirmed live in a real browser through the Cloudflare edge — real FIA
+decision counts (362 this season, Track Limits 94× on top), zero console
+errors. `origin/master` itself was 2 commits ahead of local when this
+started (the prod/staging split commits, made directly against GitHub
+outside this session) — merged cleanly, no conflicting files, before
+pushing.
 
 **Done — Cloudflare Public Hostname:** `webapp.5928104.xyz` → `http://localhost:3000`
 added to the same tunnel (`f1-tunnel`) already serving `api.5928104.xyz` and
