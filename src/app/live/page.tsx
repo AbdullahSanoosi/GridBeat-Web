@@ -19,7 +19,7 @@ import { LeaderChangeOverlay } from "@/components/live/leader-change-overlay";
 import { TrackMap } from "@/components/live/track-map";
 import { TelemetryCompare } from "@/components/live/telemetry-compare";
 import { TowerRow } from "@/components/live/tower-row";
-import { TelemetrySheet } from "@/components/live/telemetry-sheet";
+import { TelemetryPanel } from "@/components/live/telemetry-sheet";
 import { PlaybackControl } from "@/components/live/playback-control";
 import { CommentaryPlayer } from "@/components/live/commentary-player";
 import { BackendPanel } from "@/components/dev/backend-panel";
@@ -54,9 +54,8 @@ export default function LiveTimingPage() {
   const reconnect = useLiveTimingStore((s) => s.reconnect);
   const forceRefresh = useLiveTimingStore((s) => s.forceRefresh);
   const onSessionEnded = useLiveTimingStore((s) => s.onSessionEnded);
-  const [tab, setTab] = useState<"tower" | "comms" | "map" | "telemetry">("tower");
   const [telemetrySelected, setTelemetrySelected] = useState<Set<number>>(new Set());
-  const [openDriver, setOpenDriver] = useState<number | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<number | null>(null);
 
   const toggleTelemetryDriver = (driverNumber: number) => {
     setTelemetrySelected((prev) => {
@@ -90,7 +89,12 @@ export default function LiveTimingPage() {
     if (mounted && clockStopped) onSessionEnded();
   }, [mounted, clockStopped, onSessionEnded]);
 
-  const openEntry = openDriver != null ? leaderboard[String(openDriver)] : undefined;
+  // Telemetry panel defaults to the race leader until someone clicks a row,
+  // rather than sitting empty — same idea as a broadcast graphic defaulting
+  // to P1. Derived at render time (not synced via an effect + setState) so
+  // it stays live if the leader changes before any row's been clicked.
+  const effectiveSelectedDriver = selectedDriver ?? rows[0]?.driverNumber ?? null;
+  const selectedEntry = effectiveSelectedDriver != null ? (leaderboard[String(effectiveSelectedDriver)] ?? null) : null;
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-8 sm:py-8">
@@ -127,23 +131,6 @@ export default function LiveTimingPage() {
         </div>
       )}
 
-      <div className="mb-4 overflow-x-auto">
-        <div className="flex w-fit rounded-full border border-(--color-border) p-1">
-          <TabButton active={tab === "tower"} onClick={() => setTab("tower")}>
-            Tower
-          </TabButton>
-          <TabButton active={tab === "comms"} onClick={() => setTab("comms")}>
-            Comms
-          </TabButton>
-          <TabButton active={tab === "map"} onClick={() => setTab("map")}>
-            Map
-          </TabButton>
-          <TabButton active={tab === "telemetry"} onClick={() => setTab("telemetry")}>
-            Telemetry
-          </TabButton>
-        </div>
-      </div>
-
       {mounted && rows.length === 0 && (
         <div className="flex flex-col items-start gap-2 text-(--color-text-secondary)">
           <p>{connected ? (debugInfo ?? "Waiting for leaderboard…") : "Connecting to live timing…"}</p>
@@ -156,82 +143,92 @@ export default function LiveTimingPage() {
         </div>
       )}
 
-      {rows.length > 0 && tab === "tower" && (
-        <Tower
-          rows={rows}
-          telemetry={telemetry}
-          gridPositions={gridPositions}
-          stewardStatuses={stewardStatuses}
-          onOpenDriver={setOpenDriver}
-        />
-      )}
+      {/* Everything live in one screen, no tab-switching: the Tower is the
+          spine on the left, with Pit Stops/Team Radio in a row underneath
+          it (same width as the Tower, using the space a short driver list
+          leaves blank on a tall viewport). The right rail holds Map,
+          Telemetry, and Race Control stacked — Race Control is the one
+          comms feed that's naturally a narrow, fast-scrolling ticker, so it
+          fits that column better than a wide card would. Below xl there's
+          no room for two columns, so it collapses to one and everything
+          just stacks in reading order — still no tabs, a normal scroll
+          instead. */}
+      {rows.length > 0 && (
+        <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <section aria-labelledby="tower-heading">
+              <h2 id="tower-heading" className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">
+                TIMING TOWER
+              </h2>
+              <Tower
+                rows={rows}
+                telemetry={telemetry}
+                gridPositions={gridPositions}
+                stewardStatuses={stewardStatuses}
+                selectedDriver={effectiveSelectedDriver}
+                onSelectDriver={setSelectedDriver}
+              />
+            </section>
 
-      {tab === "map" && <TrackMap />}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <CommsWidget title="PIT STOPS" maxHeight={420}>
+                <PitStopsList stops={pitStops} />
+              </CommsWidget>
 
-      {tab === "telemetry" && (
-        <TelemetryCompare
-          drivers={rows}
-          leaderboard={leaderboard}
-          telemetryHistory={telemetryHistory}
-          lapTimeHistory={lapTimeHistory}
-          currentLapSectors={currentLapSectors}
-          selected={telemetrySelected}
-          onToggle={toggleTelemetryDriver}
-        />
-      )}
-
-      {tab === "comms" && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div>
-            <h2 className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">RACE CONTROL</h2>
-            <RaceControlFeed messages={raceControl} />
+              <CommsWidget title="TEAM RADIO" maxHeight={420}>
+                <TeamRadioList messages={teamRadio} />
+              </CommsWidget>
+            </div>
           </div>
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">PIT STOPS</h2>
-              <PitStopsList stops={pitStops} />
-            </div>
-            <div>
-              <h2 className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">TEAM RADIO</h2>
-              <TeamRadioList messages={teamRadio} />
-            </div>
+
+          <div className="flex min-h-0 min-w-0 flex-col gap-6">
+            <section aria-labelledby="map-heading" className="shrink-0">
+              <h2 id="map-heading" className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">
+                TRACK MAP
+              </h2>
+              <TrackMap height={320} />
+            </section>
+
+            <section aria-labelledby="telemetry-heading" className="shrink-0">
+              <h2 id="telemetry-heading" className="sr-only">
+                Driver telemetry
+              </h2>
+              <TelemetryPanel
+                entry={selectedEntry}
+                telemetry={effectiveSelectedDriver != null ? telemetry[effectiveSelectedDriver] : undefined}
+                pitStops={
+                  effectiveSelectedDriver != null
+                    ? pitStops.filter((p) => p.driverNumber === effectiveSelectedDriver)
+                    : []
+                }
+                steward={effectiveSelectedDriver != null ? stewardStatuses[effectiveSelectedDriver] : undefined}
+              />
+            </section>
+
+            <CommsWidget title="RACE CONTROL" maxHeight={675}>
+              <RaceControlFeed messages={raceControl} />
+            </CommsWidget>
           </div>
         </div>
       )}
 
-      {openEntry && (
-        <TelemetrySheet
-          entry={openEntry}
-          telemetry={telemetry[openEntry.driverNumber]}
-          pitStops={pitStops.filter((p) => p.driverNumber === openEntry.driverNumber)}
-          steward={stewardStatuses[openEntry.driverNumber]}
-          onClose={() => setOpenDriver(null)}
-        />
+      {rows.length > 0 && (
+        <section aria-labelledby="compare-heading" className="mt-6">
+          <h2 id="compare-heading" className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">
+            TELEMETRY COMPARE
+          </h2>
+          <TelemetryCompare
+            drivers={rows}
+            leaderboard={leaderboard}
+            telemetryHistory={telemetryHistory}
+            lapTimeHistory={lapTimeHistory}
+            currentLapSectors={currentLapSectors}
+            selected={telemetrySelected}
+            onToggle={toggleTelemetryDriver}
+          />
+        </section>
       )}
     </main>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
-        active
-          ? "bg-(--color-primary) text-(--color-on-secondary)"
-          : "text-(--color-text-secondary) hover:text-(--color-text-primary)"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -326,18 +323,40 @@ function LiveHeader({
   );
 }
 
+/** One self-contained, independently-scrollable comms card — Race Control, Pit Stops, and Team Radio each get their own instead of sharing one box. */
+function CommsWidget({
+  title,
+  maxHeight,
+  children,
+}: {
+  title: string;
+  maxHeight: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-4">
+      <h2 className="mb-3 text-xs font-bold tracking-widest text-(--color-text-muted)">{title}</h2>
+      <div className="overflow-y-auto pr-1" style={{ maxHeight }}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function Tower({
   rows,
   telemetry,
   gridPositions,
   stewardStatuses,
-  onOpenDriver,
+  selectedDriver,
+  onSelectDriver,
 }: {
   rows: LeaderboardEntry[];
   telemetry: Record<number, CarTelemetry>;
   gridPositions: Record<number, number>;
   stewardStatuses: Record<number, DriverSteward>;
-  onOpenDriver: (driverNumber: number) => void;
+  selectedDriver: number | null;
+  onSelectDriver: (driverNumber: number) => void;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-(--color-border)">
@@ -359,7 +378,8 @@ function Tower({
               telemetry={telemetry[row.driverNumber]}
               gridPosition={gridPositions[row.driverNumber]}
               steward={stewardStatuses[row.driverNumber]}
-              onOpen={() => onOpenDriver(row.driverNumber)}
+              isSelected={row.driverNumber === selectedDriver}
+              onOpen={() => onSelectDriver(row.driverNumber)}
             />
           ))}
         </tbody>

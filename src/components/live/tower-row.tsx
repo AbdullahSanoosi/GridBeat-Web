@@ -35,12 +35,14 @@ export function TowerRow({
   telemetry,
   gridPosition,
   steward,
+  isSelected,
   onOpen,
 }: {
   row: LeaderboardEntry;
   telemetry: CarTelemetry | undefined;
   gridPosition: number | undefined;
   steward: DriverSteward | undefined;
+  isSelected?: boolean;
   onOpen: () => void;
 }) {
   const showKnockedOut = row.knockedOut && !row.retired;
@@ -59,7 +61,13 @@ export function TowerRow({
     <tr
       onClick={onOpen}
       className="animate-row-in cursor-pointer border-b border-(--color-divider) last:border-0 hover:brightness-125"
-      style={{ backgroundColor: rowTint(row, showKnockedOut, steward), opacity: isInactive ? 0.45 : 1 }}
+      style={{
+        backgroundColor: isSelected
+          ? "color-mix(in srgb, var(--color-primary) 12%, transparent)"
+          : rowTint(row, showKnockedOut, steward),
+        boxShadow: isSelected ? "inset 3px 0 0 var(--color-primary)" : undefined,
+        opacity: isInactive ? 0.45 : 1,
+      }}
     >
       <td className="px-3 py-2.5">
         <div className="flex items-center gap-2">

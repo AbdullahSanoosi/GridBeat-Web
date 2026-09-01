@@ -19,7 +19,7 @@ const TrackMapScene = dynamic(() => import("./scene"), {
   loading: () => <MapMessage text="Loading 3D map…" />,
 });
 
-export function TrackMap() {
+export function TrackMap({ height = 600 }: { height?: number }) {
   const sessionInfo = useLiveTimingStore((s) => s.sessionInfo);
   const trackDots = useLiveTimingStore((s) => s.trackDots);
   const carPositions = useLiveTimingStore((s) => s.carPositions);
@@ -42,7 +42,10 @@ export function TrackMap() {
   const hasAnyPoints = Boolean(trackData?.points.length || trackDots.length || Object.keys(carPositions).length);
 
   return (
-    <div className="relative h-[600px] w-full min-w-0 overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface)">
+    <div
+      className="relative w-full min-w-0 overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface)"
+      style={{ height }}
+    >
       {hasAnyPoints ? (
         <TrackMapScene
           trackData={trackData}

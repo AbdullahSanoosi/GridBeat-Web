@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import {
   drsActive,
   type CarTelemetry,
@@ -55,44 +54,46 @@ function effectiveSectorStatus(entry: LeaderboardEntry, i: number): number {
   return 0;
 }
 
-export function TelemetrySheet({
+/**
+ * Ported from the driver-detail sheet the Flutter app opens on tap — here
+ * it's an always-present in-flow panel instead, not a modal takeover. A
+ * click-to-open overlay works on mobile (one thing on screen at a time) but
+ * fights the web dashboard's own "everything visible together" layout: the
+ * panel now just re-renders in place with whichever driver's row was last
+ * clicked in the Tower, defaulting to the race leader, with no backdrop and
+ * nothing else on screen dimmed or covered.
+ */
+export function TelemetryPanel({
   entry,
   telemetry,
   pitStops,
   steward,
-  onClose,
 }: {
-  entry: LeaderboardEntry;
+  entry: LeaderboardEntry | null;
   telemetry: CarTelemetry | undefined;
   pitStops: PitStop[];
   steward: DriverSteward | undefined;
-  onClose: () => void;
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  if (!entry) {
+    return (
+      <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-4">
+        <span className="text-xs font-bold tracking-widest text-(--color-text-muted)">DRIVER TELEMETRY</span>
+        <div className="mt-3 flex h-24 items-center justify-center text-center text-sm text-(--color-text-muted)">
+          Select a driver in the Tower to see live telemetry.
+        </div>
+      </div>
+    );
+  }
 
   const teamColor = teamColorHex(entry.teamColor);
   const isDrsActive = telemetry != null && drsActive(telemetry.drs);
   const stewardActive = steward != null && steward.state !== "none";
 
   return (
-    <>
-      <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-full flex-col gap-4 overflow-y-auto border-l border-(--color-border) bg-(--color-surface) p-4 lg:w-[420px] lg:max-w-[420px]">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold tracking-widest text-(--color-text-muted)">DRIVER TELEMETRY</span>
-          <button
-            onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-(--color-text-secondary) hover:bg-(--color-surface-elevated)"
-          >
-            ×
-          </button>
-        </div>
+    <div className="flex flex-col gap-4 rounded-2xl border border-(--color-border) bg-(--color-surface) p-4">
+      <span className="text-xs font-bold tracking-widest text-(--color-text-muted)">DRIVER TELEMETRY</span>
 
-        {stewardActive && <StewardBanner steward={steward} />}
+      {stewardActive && <StewardBanner steward={steward} />}
 
         {/* Driver header */}
         <div
@@ -139,9 +140,8 @@ export function TelemetrySheet({
 
         <SectorTimes entry={entry} />
 
-        {entry.stints.length > 0 && <TyreStrategy stints={entry.stints} pitStops={pitStops} />}
-      </div>
-    </>
+      {entry.stints.length > 0 && <TyreStrategy stints={entry.stints} pitStops={pitStops} />}
+    </div>
   );
 }
 
