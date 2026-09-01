@@ -1,7 +1,9 @@
 version: '3.8'
 
-# gridbeat-web (prod, dashboard.gridbeat.app) and gridbeat-web-staging
-# (webapp.5928104.xyz) run as separate containers on separate ports so a
+# gridbeat-web (prod, dashboard.gridbeat.app, port 3000) and
+# gridbeat-web-staging (webapp.5928104.xyz, port 3002 — 3001 on this box is
+# already taken by the uptime-kuma container) run as separate containers on
+# separate ports so a
 # staging rebuild never restarts/downs the container production traffic is
 # hitting. Always target one service by name when building/restarting
 # (`docker-compose up -d --build gridbeat-web-staging`) — a bare
@@ -26,6 +28,6 @@ services:
     restart: always
     network_mode: host
     environment:
-      - PORT=3001
+      - PORT=3002
     env_file:
       - .env
