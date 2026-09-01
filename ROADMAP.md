@@ -520,8 +520,29 @@ than guessing at the OpenF1 driver-number mapping from the frontend.
       podiums — both checked against real F1 history, not just "renders
       without crashing". Zero console errors in an isolated tab, no mobile
       overflow.
-- [ ] **3.8** Driver + constructor details — close the gap to the Flutter
-      versions
+- [x] **3.8** Driver + constructor details — audited against the Flutter
+      source and found **no real gap**, same pattern as 3.6/3.7. Compared
+      section-by-section, not by line count: `driver_details_screen.dart`
+      (2463 lines) has Hero/HeroKpi/StatTile, Bio (Personal/Career
+      BioGroups), Career Totals, All-Time Rankings (RankCard+NeighborRow),
+      Rankings by Team, Circuit Performance, H2H Summary, Qualifying Gap,
+      Championship History, Season Stats, Results by Year — every one of
+      these is already present in [driver/[driverId]/page.tsx](src/app/driver/[driverId]/page.tsx)
+      (618 lines). `constructor_details_screen.dart` (1798 lines) has
+      About (Drivers/Technical/Team), Career Totals, All-Time Rankings,
+      Circuit Performance (best-circuit), Championship History, Season
+      Stats, Records — all present in
+      [constructor/[constructorId]/page.tsx](src/app/constructor/[constructorId]/page.tsx)
+      (431 lines) too. Spot-checked content depth, not just section names:
+      the constructor Records section's 6 metric keys (`first_gp`,
+      `last_gp`, `best_result`, `best_grid`, `best_wcc_rank`,
+      `best_wdc_rank`) and their `P{n} · {season} · {driver}` value format
+      match `_ConstructorRecordsSection`'s row-building logic exactly. The
+      2463/1798-line Flutter files are MD3 widget boilerplate (padding/
+      shimmer/icon wrappers per row) — TS + Tailwind expresses the same
+      content in roughly a quarter of the lines. No code changes made;
+      this item just needed the same "verify before declaring a gap" check
+      already applied to 3.6/3.7, which turned up nothing to fix.
 
 ## Phase 4 — Learn F1 `/learn`
 
