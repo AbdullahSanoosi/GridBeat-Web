@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   getSeasonRacesWithCircuit,
@@ -12,6 +13,7 @@ import {
 import { staleTime } from "@/lib/query/ttl";
 import { config } from "@/lib/config";
 import { useMounted } from "@/hooks/use-mounted";
+import { circuitColor } from "@/lib/theme/colors";
 import {
   archiveRacesFromRows,
   archiveSeasons,
@@ -26,8 +28,21 @@ type Tab = "races" | "drivers" | "constructors";
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
-  year: "numeric",
 });
+
+/**
+ * Ported verbatim from results_screen.dart's `_archiveFacts` — real F1
+ * trivia, not fabricated. Rotates deterministically by the current minute,
+ * same as the Flutter `_ArchiveHero`.
+ */
+const ARCHIVE_FACTS: { icon: string; color: string; fact: string }[] = [
+  { icon: "🏁", color: "#E80020", fact: "The first F1 World Championship race was held at Silverstone on 13 May 1950." },
+  { icon: "⚡", color: "#06B6D4", fact: "Michael Schumacher won 7 consecutive races in 2004 — a streak that took 19 years to beat." },
+  { icon: "🏆", color: "#FFD700", fact: "Juan Manuel Fangio won 5 World Championships in 8 seasons — a record that stood for 46 years." },
+  { icon: "🔥", color: "#FF8000", fact: "The closest F1 finish ever was 0.010s — Peter Gethin won the 1971 Italian GP at 242 km/h." },
+  { icon: "💫", color: "#8B5CF6", fact: "Ayrton Senna's 65 pole positions were earned in an era with no power steering or traction control." },
+  { icon: "📈", color: "#10B981", fact: "Ferrari has competed in every single F1 World Championship season since the very first in 1950." },
+];
 
 export default function ResultsPage() {
   const mounted = useMounted();
@@ -64,8 +79,8 @@ export default function ResultsPage() {
   });
 
   return (
-    <main className="flex-1 px-8 py-8">
-      <div className="mb-6 flex items-center justify-between">
+    <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-[var(--font-f1)] text-2xl font-bold">Race Archives</h1>
         <div className="flex items-center gap-3">
           {tab === "races" && (
@@ -81,7 +96,7 @@ export default function ResultsPage() {
               ))}
             </select>
           )}
-          <div className="flex rounded-full border border-(--color-border) p-1">
+          <div className="flex rounded-full bg-(--color-surface-elevated) p-1">
             <TabButton active={tab === "races"} onClick={() => setTab("races")}>
               Races
             </TabButton>
@@ -95,12 +110,12 @@ export default function ResultsPage() {
         </div>
       </div>
 
+      {mounted && <ArchiveHero />}
+
       {!mounted ? (
         <p className="text-(--color-text-secondary)">Loading…</p>
       ) : tab === "races" ? (
-        <QueryState query={racesQuery}>
-          {(races) => <RacesTable races={races} />}
-        </QueryState>
+        <QueryState query={racesQuery}>{(races) => <RaceCardList races={races} />}</QueryState>
       ) : tab === "drivers" ? (
         <QueryState query={driverChampionsQuery}>
           {(champions) => <ChampionsTable champions={champions} />}
@@ -155,49 +170,76 @@ function TabButton({
   );
 }
 
-function RacesTable({ races }: { races: ArchiveRace[] }) {
+/** Ports _ArchiveHero — a rotating real F1 trivia fact, deterministic by the current minute. */
+function ArchiveHero() {
+  const [factIndex] = useState(() => new Date().getMinutes() % ARCHIVE_FACTS.length);
+  const f = ARCHIVE_FACTS[factIndex];
   return (
-    <div className="overflow-x-auto rounded-xl border border-(--color-border)">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-(--color-border) text-(--color-text-muted)">
-            <th className="px-4 py-3 font-medium">Rd</th>
-            <th className="px-4 py-3 font-medium">Race</th>
-            <th className="px-4 py-3 font-medium">Circuit</th>
-            <th className="px-4 py-3 font-medium">Date</th>
-            <th className="px-4 py-3 font-medium">Winner</th>
-          </tr>
-        </thead>
-        <tbody>
-          {races.map((race) => (
-            <tr
-              key={race.round}
-              className="border-b border-(--color-divider) last:border-0 hover:bg-(--color-surface-elevated)"
+    <div className="mb-4 flex items-start gap-3 rounded-xl bg-(--color-surface-elevated) p-4">
+      <div
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-lg"
+        style={{ color: f.color, borderColor: `color-mix(in srgb, ${f.color} 40%, transparent)`, backgroundColor: `color-mix(in srgb, ${f.color} 18%, transparent)` }}
+      >
+        {f.icon}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[10px] font-black tracking-[0.16em]" style={{ color: f.color }}>
+          FROM THE VAULT
+        </div>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-(--color-text-primary)">{f.fact}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Ports _RaceCard — circuit-color accent bar, round badge, and a gold P1 winner badge. */
+function RaceCardList({ races }: { races: ArchiveRace[] }) {
+  const router = useRouter();
+  return (
+    <div className="flex flex-col gap-2">
+      {races.map((race) => {
+        const hasWinner = !!race.winnerName?.trim();
+        const accent = circuitColor(race.circuitId);
+        return (
+          <div
+            key={race.round}
+            onClick={() => router.push(`/race-details/${race.season}-${race.round}`)}
+            className="flex cursor-pointer items-center gap-3 rounded-xl bg-(--color-surface-elevated) p-3 transition-colors hover:bg-(--color-surface)"
+          >
+            <div className="w-1 shrink-0 self-stretch rounded-full" style={{ backgroundColor: accent }} />
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border font-[var(--font-f1)] text-[11px] font-black"
+              style={{ color: accent, borderColor: `color-mix(in srgb, ${accent} 40%, transparent)`, backgroundColor: `color-mix(in srgb, ${accent} 18%, transparent)` }}
             >
-              <td className="px-4 py-3 text-(--color-text-muted)">{race.round}</td>
-              <td className="px-4 py-3 font-medium">{race.raceName}</td>
-              <td className="px-4 py-3 text-(--color-text-secondary)">
-                {race.locality}, {race.country}
-              </td>
-              <td className="px-4 py-3 text-(--color-text-secondary)">
-                {race.date ? dateFormatter.format(new Date(race.date)) : "—"}
-              </td>
-              <td className="px-4 py-3">
-                {race.winnerName ? (
-                  <>
-                    <span className="font-medium">{race.winnerName}</span>
-                    {race.winnerTeam && (
-                      <span className="text-(--color-text-muted)"> · {race.winnerTeam}</span>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-(--color-text-muted)">—</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              R{race.round}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[14px] font-extrabold">{race.raceName.replace("Grand Prix", "GP")}</div>
+              <div className="mt-[3px] flex items-center gap-1.5 text-[10px]">
+                <span className="font-bold tracking-[0.1em]" style={{ color: accent }}>
+                  {race.locality.toUpperCase()}
+                </span>
+                <span className="h-[3px] w-[3px] rounded-full bg-(--color-text-muted)" />
+                <span className="text-(--color-text-muted)">
+                  {race.date ? dateFormatter.format(new Date(race.date)) : "—"}
+                </span>
+              </div>
+              {hasWinner && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <span className="rounded px-1.5 py-[1px] font-[var(--font-f1)] text-[9px] font-black text-[#FFD700]" style={{ backgroundColor: "color-mix(in srgb, #FFD700 18%, transparent)" }}>
+                    P1
+                  </span>
+                  <span className="truncate text-[10px] text-(--color-text-secondary)">
+                    {race.winnerName}
+                    {race.winnerTeam && ` · ${race.winnerTeam}`}
+                  </span>
+                </div>
+              )}
+            </div>
+            <span className="shrink-0 text-(--color-text-muted)">›</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
