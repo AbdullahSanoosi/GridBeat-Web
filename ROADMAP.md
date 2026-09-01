@@ -605,7 +605,39 @@ completely independent of the 3D rendering, so 4.3 stayed in scope as a
 - [ ] **5.1** Loading skeletons everywhere (no bare "Loading…")
 - [ ] **5.2** Empty/error states with real copy
 - [ ] **5.3** Full responsive pass on every new route (320 → 1440)
-- [ ] **5.4** OG tags + metadata per route
+- [x] **5.4** OG tags + metadata per route — a `layout.tsx` server component
+      next to every route's client `page.tsx` (adding `metadata`/
+      `generateMetadata` to the client file itself isn't legal — Next.js
+      requires a Server Component). Static routes get a plain `metadata`
+      export; the four genuinely dynamic ones (`driver/[driverId]`,
+      `constructor/[constructorId]`, `circuits/[circuitId]` +
+      `.../leaderboard`, `race-details/[raceId]`, `stats/[metricKey]`) use
+      `generateMetadata` — three fetch a real name via three new one-row
+      lookups added to `stats-api.ts` (`getDriverName`/`getConstructorName`/
+      `getCircuitName`/`getRaceName`, cheaper than pulling the whole table
+      for a single-entity title), the last reads `stats-catalog.ts`
+      synchronously since the metric label never needed a fetch. A real bug
+      surfaced during verification, not assumed from the docs: root's
+      `title: { template: "%s | GridBeat" }` only cascades through **one**
+      level of nesting — a route two-plus levels below root
+      (`stats/[metricKey]`, `stats/quali-to-race`, `learn/penalties`,
+      `circuits/[circuitId]`, `.../leaderboard`) silently dropped the
+      " | GridBeat" suffix because the intermediate `stats/`/`learn/`/
+      `circuits/` layout doesn't redeclare the template. Confirmed by
+      fetching raw HTML for both a one-level route (suffix present) and a
+      two-level one (missing) before touching any code, then fixed by
+      spelling the full title out at the affected leaf layouts instead of
+      trusting the cascade. Verified server-rendered (not just client-side)
+      via raw `fetch()` + regex on `<title>`/meta description for 9 routes
+      spanning every case: `/schedule` → "Schedule | GridBeat", `/driver/
+      max_verstappen` → "Max Verstappen | GridBeat", `/circuits/monza` →
+      "Autodromo Nazionale di Monza | GridBeat" (the two-level bug, fixed),
+      `/stats/wins` → "Wins | GridBeat" (same bug, fixed). **Deliberately
+      skipped:** per-page OG *images* (Next's `opengraph-image` convention
+      needs a rendered PNG per route via `ImageResponse` — real scope, not
+      "add a field") — every route ships a correct title/description now,
+      which is the part that actually breaks link previews when missing;
+      add generated OG images as a separate pass if/when it's worth it.
 - [ ] **5.5** Re-verify the homepage WS connection cost before public launch
 
 ---

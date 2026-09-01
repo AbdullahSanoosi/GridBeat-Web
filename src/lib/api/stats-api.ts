@@ -183,6 +183,33 @@ export function getAllCircuits(): Promise<Row[]> {
   });
 }
 
+/** One driver's display name, for `generateMetadata` — cheaper than `getAllDrivers()` for a single lookup. */
+export async function getDriverName(driverId: string): Promise<string | null> {
+  const rows = await get("/drivers", { driver_id: `eq.${driverId}`, select: "given_name,family_name", limit: 1 });
+  if (!rows[0]) return null;
+  const name = `${rows[0].given_name ?? ""} ${rows[0].family_name ?? ""}`.toString().trim();
+  return name || null;
+}
+
+/** One constructor's display name, for `generateMetadata`. */
+export async function getConstructorName(constructorId: string): Promise<string | null> {
+  const rows = await get("/constructors", { constructor_id: `eq.${constructorId}`, select: "name", limit: 1 });
+  return (rows[0]?.name as string) ?? null;
+}
+
+/** One circuit's name/country, for `generateMetadata`. */
+export async function getCircuitName(circuitId: string): Promise<{ name: string; country: string } | null> {
+  const rows = await get("/circuits", { circuit_id: `eq.${circuitId}`, select: "name,country", limit: 1 });
+  if (!rows[0]) return null;
+  return { name: rows[0].name as string, country: (rows[0].country as string) ?? "" };
+}
+
+/** One race's name, for `generateMetadata` — `raceId` is this app's `${season}-${round}` key. */
+export async function getRaceName(season: number, round: number): Promise<string | null> {
+  const rows = await get("/races", { season: `eq.${season}`, round: `eq.${round}`, select: "race_name", limit: 1 });
+  return (rows[0]?.race_name as string) ?? null;
+}
+
 /** Every race in one season, calendar order — race picker on Quali -> Race Progression. */
 export function getRacesForSeason(season: number): Promise<Row[]> {
   return get("/races", {
