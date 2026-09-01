@@ -26,7 +26,7 @@ quality measure — but the shape of the gap is real.
 | Standings | 811 | 286 | **Phase 3 done** |
 | Schedule | 782 | 278 | **Phase 3 done** |
 | Stats hub | 526 | 118 | **Phase 3 done** |
-| Hall of Fame (3 screens) | 1427 | 162 | Thin |
+| Hall of Fame (3 screens) | 1427 | 255 | **Phase 3 done** |
 | News | 478 | 126 | Thin |
 | Live Timing | 2634 | 369 | **At parity** |
 | Race progression | 421 | 137 | At parity |
@@ -498,7 +498,28 @@ than guessing at the OpenF1 driver-number mapping from the frontend.
       needed no changes — confirmed still working (driver/constructor
       toggle, real 106-Hamilton-win data). Verified: all 9 categories
       render, zero console errors in an isolated tab, no mobile overflow.
-- [ ] **3.7** Hall of Fame — split driver/constructor screens
+- [x] **3.7** Hall of Fame — the data layer (`hall-of-fame.ts`) was
+      **already a complete port**: the full all-time index since 1950
+      (every driver/constructor, not a winners-only shortlist, matching
+      `hall_of_fame_provider.dart`'s explicit "865 drivers, not a
+      shortlist" comment), same stats-api sourcing, same titles-then-wins
+      sort. ("Split driver/constructor screens" in the original roadmap
+      wording doesn't match the source either — `hall_of_fame_screen.dart`
+      is explicitly a *combined* screen with drivers/teams as tabs "instead
+      of two separate nav-menu entries", which is exactly what this page
+      already did.) The actual gap was visual: no hero for the #1 all-time
+      entry, unlike every other listing page this phase touched. Added
+      `DriverHero`/`ConstructorHero` (ports `_HeroChampion` — gold glow,
+      archive photo faded in from the right via a CSS mask, "Nx WORLD
+      CHAMPION"/"Nx CONSTRUCTORS' CHAMPION" chip, big win/podium/pole/DNF
+      stats) using `drivers`/`constructors.image_url` — stats-api's own
+      archive photo, not Supabase, so this works even with the placeholder
+      credentials. Table rows gained rank numbers. Verified: Hamilton's
+      hero shows his real 7 titles/106 wins/207 podiums/107 poles/35 DNFs
+      with his photo loading; Ferrari's shows 16 titles/250 wins/845
+      podiums — both checked against real F1 history, not just "renders
+      without crashing". Zero console errors in an isolated tab, no mobile
+      overflow.
 - [ ] **3.8** Driver + constructor details — close the gap to the Flutter
       versions
 

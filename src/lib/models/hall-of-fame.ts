@@ -2,10 +2,14 @@
  * Ported from GridBeat (Flutter) lib/features/hall_of_fame/providers/hall_of_fame_provider.dart —
  * a full all-time index (every driver/constructor on record since 1950, not
  * just winners), wins/podiums/poles/dnfs defaulting to 0 for anyone who
- * never scored one. Supabase bio images are a bonus enrichment layered on
- * top for whoever's on the current grid, not a requirement — not ported
- * here (this is stats-api-only) since the web dashboard doesn't have a
- * dense-avatar-grid layout to hang photos on; it's a data table instead.
+ * never scored one.
+ *
+ * `imageUrl` is stats-api's own archive photo (`drivers`/`constructors`
+ * .image_url), not Supabase — this is the same source Flutter's own
+ * `_HeroChampion` prefers for the #1 all-time entry (an archive headshot
+ * reads correctly even small; the current-grid Supabase bio photo is a
+ * full-length racesuit render sized for a different, bigger hero card).
+ * Supabase itself is intentionally not queried here at all.
  */
 import { getAllConstructors, getAllDrivers, getAllConstructorTitles, getAllDriverTitles, getComputedStats } from "@/lib/api/stats-api";
 import type { Row } from "@/lib/api/types";
@@ -19,6 +23,8 @@ export interface HallOfFameDriver {
   podiums: number;
   poles: number;
   dnfs: number;
+  /** stats-api's own archive photo (not Supabase) — same source `_HeroChampion` prefers over the current-grid bio image. */
+  imageUrl: string | null;
 }
 
 export interface HallOfFameConstructor {
@@ -29,6 +35,7 @@ export interface HallOfFameConstructor {
   wins: number;
   podiums: number;
   poles: number;
+  imageUrl: string | null;
 }
 
 function tallyById(rows: Row[], idField: string): Record<string, number> {
@@ -71,6 +78,7 @@ export async function getDriverHallOfFame(): Promise<HallOfFameDriver[]> {
       podiums: podiums[driverId] ?? 0,
       poles: poles[driverId] ?? 0,
       dnfs: dnfs[driverId] ?? 0,
+      imageUrl: (d.image_url as string | null) || null,
     };
   });
 
@@ -101,6 +109,7 @@ export async function getConstructorHallOfFame(): Promise<HallOfFameConstructor[
       wins: wins[constructorId] ?? 0,
       podiums: podiums[constructorId] ?? 0,
       poles: poles[constructorId] ?? 0,
+      imageUrl: (c.image_url as string | null) || null,
     };
   });
 
