@@ -2,6 +2,13 @@
 
 # gridbeat-web — Notes for Claude
 
+> **New here? Read [HANDOFF.md](HANDOFF.md) first.** It is the cross-repo
+> map: the three repos and how they relate, the design concepts behind
+> "make it sexy", the data-honesty rules, deploy runbooks for both the web
+> app and the Oracle backend, and how the user works. This file is the
+> detail on *this* repo; that one is the orientation.
+
+
 Next.js (App Router) web dashboard port of **GridBeat**, the Flutter F1 app at
 `../GridBeat` (sibling directory). Same backends, same design language, new
 desktop-first UI — this is not a wrapper or a WebView, every page is a real
@@ -80,6 +87,95 @@ tagline visible, overlay faded with `pointer-events: none`. The one thing
 that could not be verified here, on either pass, is the smooth in-between
 playback itself — the user confirmed the redesigned version looks good in
 their own real browser.
+
+**Done — marketing homepage at `/`:** replaced the old `redirect("/schedule")`
+with a real landing page that doubles as the dashboard's entry point.
+`Sidebar` returns `null` on `/` so the hero is full-bleed; every other route
+keeps its chrome. New dep: `motion` (motion.dev v13, `motion/react`).
+Sections, all in `src/components/home/`:
+- `hero.tsx` + `live-tower.tsx` (`TowerWall`) — the hero *is* the product:
+  a full-bleed 20-row timing wall running a live session behind the brand,
+  not a card beside it. Sector bars fill yellow→green→purple, lap times
+  land, and when a gap closes the two rows swap via Motion's `layout` prop,
+  which turns an array reorder into the same slide the real Tower does on
+  an overtake. Pace is *modelled*, not random (lap time rises with
+  position, one purple run per lap from anywhere in the order) — an earlier
+  version had P1 routinely slower than P6, which read as noise.
+  Deterministic initial state so it can't hydration-mismatch; motion starts
+  after mount. Two scrims, swapped at `lg`: vertical below (wall sits
+  *behind* the words, so it also drops to 0.26 opacity for legibility),
+  horizontal above (wall moves to its own right-hand 62% column and plays
+  at full strength). The first pass ran the wall at 0.5 everywhere and the
+  tablet range was unreadable — that split is what fixed it.
+- `the-lap.tsx` — the page's spine. One lap of Suzuka driven by scroll: the
+  racing line draws itself and a car marker runs the real geometry sampled
+  via `getPointAtLength`. Feature groups arrive as their sector lights up
+  (three sectors because a lap genuinely has three — not decorative `01/02`
+  numbering). **Use Motion's `pathLength` for SVG draw-on**, not a
+  hand-rolled `strokeDasharray` in `style`: Motion owns the whole `style`
+  object once a MotionValue is in it, so a static dasharray alongside one
+  never updates (computed value stayed stuck at `1px` — the line never drew).
+- `telemetry-section.tsx` + `lib/home/telemetry.ts` — speed/throttle/brake
+  over one Monza lap, hand-rolled SVG with a hover crosshair. The trace is
+  **derived, not invented**: MultiViewer's full-resolution Monza centreline
+  (752 pts) resampled to 260 stations, per-station corner radius from the
+  circumradius, scaled to the real 5,793 m lap, then a lateral-grip limit +
+  backward braking pass + forward traction-limited accel pass. That
+  asymmetry is what makes it read as telemetry. The braking events land on
+  T1/Roggia/Lesmo/Ascari/Parabolica on their own — the corner labels were
+  placed *after* checking they matched. 350 km/h peak, 73.0 s modelled lap
+  vs a real ~79–81 s pole; labelled as a model, never as a captured session.
+  (First attempt computed arc length in SVG units instead of metres and
+  produced a 151 km/h Monza; the second used the *simplified* path and
+  smoothed the chicanes away to a 222 km/h minimum. Full-res geometry in SI
+  units is what fixed it.)
+- `championship-chart.tsx` — cumulative points by round (Recharts), the same
+  shape as the app's own driver-detail championship chart. Series colour
+  follows the constructor's real livery, never the rank. Palette was run
+  through the dataviz validator: CVD ΔE 24.6, normal-vision 35.0, contrast
+  all ≥3:1 all pass; the lightness-band check FAILs because McLaren papaya
+  and Mercedes petronas are genuinely bright — kept, because team identity
+  is non-negotiable semantics, and mitigated with direct labels + team logos
+  so identity is never colour-alone.
+- `circuit-gallery.tsx` — the real `assets/images/circuit_*.png` artwork
+  (24 files, ~1 MB, copied to `public/circuits/`; team logos to
+  `public/teams/`). Facts are verbatim from `circuit_facts.dart` — lap
+  records are official race records. Circuits carry an explicit `short` code
+  because slicing the id collides Monza with Monaco.
+- `session-strip.tsx` — the hero's status bar, driven by the **real
+  live-timing WebSocket**, not fixture text. `Hero` calls the store's
+  `connect()` on mount (same singleton `/live` uses, so opening the
+  dashboard from here finds the session already bootstrapped). Reports the
+  actual GP, session type, lap count, track status and location, with the
+  same LIVE/WAITING/ENDED/OFFLINE derivation as the `/live` header — it
+  never claims LIVE when it isn't. With no session on the wire it falls
+  back to the next round from the schedule API rather than inventing one.
+  `TowerWall` follows the same rule: real `activeSortedLeaderboard` when a
+  session exists (and it skips its simulation timer entirely in that case),
+  simulated grid otherwise. Verified against the replay backend — strip read
+  `ENDED · DUTCH GP · RACE · LAP 72/72 · YELLOW FLAG · ZANDVOORT` and the
+  wall showed the real classification with real gaps and lapped cars.
+  **Trade-off to weigh before public launch:** this opens a WS connection
+  from the marketing page for every visitor, not just `/live` users.
+- `trackStatusLabel()` / `trackStatusColor()` added to `lib/models/live.ts`,
+  ported from `TrackStatusInfo` in the Flutter `app_constants.dart` — the
+  feed sends a bare numeric code and a terse token ("AllClear"), so the
+  code has to be mapped. `/live` was rendering a raw
+  `` `Track status ${status}` `` fallback and now uses these too.
+- `race-countdown.tsx` — live countdown to lights out off real schedule data.
+- `phone-frame.tsx` + `phone-showcase.tsx` — three devices with scroll
+  parallax. `PhoneFrame` is a real device frame, not a rounded box: brushed
+  titanium rail (multi-stop gradient so edges catch light), black bezel
+  inset, Dynamic Island, diagonal glass reflection, home indicator and
+  physical side buttons. **Everything is sized in percentages of frame
+  width**, so one component is sharp at a 96px thumbnail and a 260px hero
+  alike; screen recreations use `cqw` container units so their type scales
+  with the phone instead of snapping at a breakpoint. Each frame takes
+  `screenshotSrc` — drop in a real capture and it fills the screen; the CSS
+  recreation is only the fallback until those land.
+
+Driver headshots were deliberately **not** copied (32 files, 6 MB); the app
+itself uses the live feed's `headshotUrl` for those anyway.
 
 **Done — Phase 0 (foundation):** Next.js 16 + TypeScript + Tailwind v4
 scaffold, TanStack Query data layer with localStorage persistence, design
@@ -355,6 +451,116 @@ a "follow driver" camera mode. Full plan at
 `C:\Users\Abdullah Sanoosi\.claude\plans\swirling-wiggling-emerson.md` if
 still reachable.
 
+**Done — Race Details, `/race-details/[raceId]` (Roadmap Phase 2):**
+ports `race_details_screen.dart` (3333 lines). `raceId` is
+`${season}-${round}`, this app's own primary key for a race everywhere else
+(`getFullRaceResults` etc. already take them as separate params) — not a
+raw Jolpica id the schema doesn't carry. Six tabs, same "time passed, not
+data-presence" visibility rule as the Flutter `_buildTabs()`: SCHEDULE +
+CIRCUIT always shown, PRACTICE/SPRINT/QUALIFYING/RACE appear once their
+session has actually run.
+- `lib/api/stats-api.ts` gained `getFullRaceResults`/`getFullSprintResults`/
+  `getFullQualifyingResults`/`getFullPracticeResults`/`getPitStops`/
+  `getLapLeaders`. `lib/models/race-details.ts` has the row parsers plus
+  the gap/interval math ported verbatim from `_RaceResultsList`'s
+  `_computeIntervals`/`_fmtMs` and `standings_provider.dart`'s
+  `_shapeRaceResults`/`_fmtGapMs`/`_fmtAbsoluteMs` — two *different*
+  formatters in the original (interval-to-car-ahead has no `+` prefix,
+  gap-to-leader does), easy to conflate and initially did.
+  `F1Driver`/`F1Constructor`/`driverFromRow`/`constructorFromRow` are
+  reused from `standings.ts` (now exported) rather than copied a third
+  time — matches that file's own "no legacy Jolpica model to reuse, map
+  straight off the row" simplification.
+- `components/race-details/result-row.tsx` — one shared row shell
+  (position badge, team bar, name/code/team, optional chevron/below/badge
+  slots) used by RACE/SPRINT/PRACTICE/QUALIFYING instead of four near-
+  identical copies. Polymorphic: `href` navigates (RACE/SPRINT/PRACTICE),
+  `onClick` opens an inline detail panel instead (QUALIFYING — the Flutter
+  version opens a bottom sheet on tap, not a driver-page push, so the row
+  needed to support both interaction styles).
+- RACE tab (`race-results.tsx`) ports `_ResultBanner`/`_ResultCard`: winner
+  hero + podium + fastest-lap/pit records, per-row interval/gap/fastest-lap
+  tiles, grid→finish delta chevron. Two things added that don't exist in
+  Flutter at all: a full pit-stop list (the app only ever surfaces the
+  *fastest* one) and a **leaders-by-lap timeline** off `lap_leaders` — a
+  35,313-row table with zero UI in either app before this. Consecutive
+  same-driver laps are merged into stints and rendered as a colored
+  segmented bar (team color, width ∝ stint length).
+- QUALIFYING tab ports `_QualifyingResultsList`'s pole highlight + Q1/Q2/Q3
+  click-to-expand, including the OpenF1 sector-time/speed-trap lookup
+  (`fetchSectorDetail`, ports `openF1QualifyingProvider` — find the session
+  by date, map `driver_number`→`name_acronym`, pick each driver's fastest
+  non-pit-out lap with all 3 sectors valid).
+- PRACTICE tab ports `_PracticeTabView`'s FP1/FP2/FP3 (or FP1/SQ on a
+  sprint weekend) sub-tabs — `practice_results`' 3,947 rows had no web UI
+  before this.
+- SPRINT tab is the trimmed banner/rows Flutter's comment describes
+  (`sprint_results` has no time/fastest-lap columns — Jolpica's sprint
+  endpoint never provided them).
+- CIRCUIT tab is the one place that intentionally uses the *network* SVG
+  (`image_url`) instead of the bundled banner PNG — see
+  `../gridbeat/CLAUDE.md`'s "durable boundary" note: SCHEDULE/RACE/SPRINT
+  banners keep the old bundled artwork (`bundledCircuitImage()` in
+  `circuit-asset.tsx`, a `circuitId → /circuits/circuit_${id}.png` lookup
+  covering the 24 files actually shipped), CIRCUIT alone shows the real
+  network diagram and links out to the full `/circuits/:id` guide rather
+  than duplicating its long scroll. The SVG is a plain `<img>`, not
+  `next/image` — that host isn't in `next.config`'s `remotePatterns`, and
+  `next/image` additionally refuses to optimize SVGs at all without
+  `dangerouslyAllowSVG`.
+- Linked from both entry points: the Schedule page's next-race hero card
+  and every `ScheduleTable`/`RacesTable` row (Schedule and Race Archives)
+  now `router.push` into this route on click — previously "a race row
+  links nowhere."
+
+**Two real bugs found during verification, both pre-existing upstream
+issues the new route was the first thing to actually expose:**
+1. `getSchedule()` filtered `/races` by `season` but never *selected* the
+   column, so every `F1Race.season` was `""` since day one — harmless
+   until this route's `${season}-${round}` links were the first code to
+   ever read it, at which point every schedule-row click 404'd to
+   `/race-details/-1`. One-line fix: add `season` to the select list.
+2. A lapped or retired driver's `time_millis` isn't comparable to the
+   leader's (confirmed live: R12 2026, Albon retired lap 66/72 with a
+   *smaller* recorded elapsed time than the leader's 72-lap total) — the
+   raw millis diff goes negative, and JS's `%` keeps the dividend's sign
+   (Dart's doesn't, which is why the original `_fmtGapMs` never surfaced
+   this), so GAP TO LEADER rendered `+-35.530`. Fixed at two levels:
+   `RaceResultRow` now routes the DNF/DNS/DSQ/DNQ/lapped status word to
+   that tile instead of the raw diff (the lapped-only check widened to
+   catch all four status words), and `fmtGapMs` itself takes `Math.abs()`
+   as defense in depth against ever emitting a double sign again.
+
+**Found, flagged, deliberately not fixed here** — a backend ingest bug,
+out of scope for a frontend route: every 2026 `practice_results` row for
+Max Verstappen is attributed to `driver_id=vergne` (Jean-Éric Vergne)
+instead of `max_verstappen`, because the `drivers` table's `vergne` row
+carries Verstappen's real code `"VER"` instead of Vergne's actual `"JEV"`.
+30 rows, all 12 rounds, every session type — confirmed live via the API,
+not a rendering bug. Spun off as its own task with full repro rather than
+guessed at from the frontend.
+
+**Done — Circuit Guide, `/circuits` + `/circuits/[circuitId]` (Roadmap
+Phase 3, items 3.4–3.5):** full detail is in `ROADMAP.md`, not repeated
+here — this is the pointer. Landed in three passes, the last one after
+the user checked the mobile Flutter source directly and found real gaps:
+index now splits CALENDAR/PAST CIRCUITS on the *curated* boundary (not
+"this year's schedule" — those aren't the same 26 circuits) with a real
+next-race hero and character-tag filter chips; past circuits (52 of 78)
+show real season-range + race-count instead of a bare name; the detail
+page's lap/pit records, Circuit Records mini-leaderboards, Career Firsts,
+and Winning Grid Slot distribution are `computed_stats`-sourced and fetch
+**independently of Supabase** (a real architectural bug — described
+above — had accidentally gated all of that behind Supabase's presence);
+`components/shared/track-image.tsx` recolors the raw circuit SVGs the way
+Flutter's `CircuitTrackImage` always has (they were never meant to be
+shown in their stored near-black fills), proxied through
+`/api/circuit-svg` since the source host has no CORS headers. Three real,
+successively-deeper bugs in that recoloring were found and fixed by
+testing against more than one circuit's SVG — worth reading in
+`ROADMAP.md` 3.5 in full if you touch `track-image.tsx` again, since two
+of the three were each other's near-miss fix.
+
 **Not started yet:**
 - 3D Car Viewer, Learn F1/Evolution — explicitly out of scope per the
   original plan (mobile-only / lower priority; see that plan file if it's
@@ -422,6 +628,50 @@ usually still correct, just needs syntax translation.
 **CORS confirmed working** on both custom backends (`f1stats.5928104.xyz`
 and the live API) — verified via curl and a real browser fetch during
 Phase 0. No backend changes needed for anything currently built.
+
+### Supabase is a placeholder in this local dev environment — can't verify its content here
+
+`.env.local`'s `NEXT_PUBLIC_SUPABASE_URL` is `https://placeholder.supabase.co`
+and `NEXT_PUBLIC_SUPABASE_ANON_KEY` is the literal string
+`placeholder-local-build-only` — not real credentials. Every Supabase-backed
+call (`getCircuitDetail`, the bio half of `getDriverDetail`/
+`getConstructorDetail`) fails with `net::ERR_NAME_NOT_RESOLVED` in this
+setup, every time — confirmed directly, not a rendering-pane artifact like
+gotcha #6. It's silent because the affected code already degrades
+correctly: `getCircuitDetail` returns `null`; `getDriverDetail`/
+`getConstructorDetail`'s `imageUrl` falls through to the *stats-api*
+`image_url` column (a different, working source — `f1stats.8582003.xyz`,
+not Supabase) since that fallback sits after the failed bio fetch.
+
+The Circuit Guide detail page no longer shows a bare "no extended guide"
+message on this failure, and now for two independent reasons. First,
+`lib/models/circuit-facts.ts` (ported from the Flutter app's
+`circuit_facts.dart`, 26 curated circuits) is wired in as the documented
+Supabase fallback. Second — the bigger fix — **lap/pit records, first/
+last-season-raced, race count, the Circuit Records mini-leaderboards,
+Career Firsts, and the Winning Grid Slot distribution are not Supabase
+data at all**; they're `computed_stats` (stats-api), fetched via
+`getStatsForEntity(circuitId)`/`getCircuitLeaderboard()` completely
+independently of whether the Supabase bio row exists. An earlier version
+of this page had accidentally coupled them — `getCircuitDetail()`
+returned `null`, and every caller stopped there, *before* it ever
+computed those records — silently dropping real, live, verifiable data
+behind Supabase's unrelated failure. That's fixed; those sections can be
+trusted and verified in this environment same as anywhere else. Driver/
+constructor "about" bios have no such fallback or decoupling and still
+show nothing beyond the stats-api image.
+
+Practical effect, narrowed to what's actually still unverifiable:
+**circuit descriptions/recent-podiums-text (Supabase-*sourced* content
+specifically) and driver/constructor "about" bios cannot be visually
+verified as correct here** — only that the failure degrades gracefully
+(to the curated-facts fallback, or to nothing) instead of crashing. A
+real Supabase project (production's `.env.production`, or the user's own
+credentials) is needed to check that content actually renders right.
+Don't mistake "no visible error" for "Supabase data confirmed working" on
+any page that touches `DriverDetails`/`ConstructorDetails`/`CircuitDetails`
+— note the gap explicitly instead, the way this session's Circuit Guide
+work did (Roadmap 3.5).
 
 ### Security: don't regress the X-posts proxy
 
