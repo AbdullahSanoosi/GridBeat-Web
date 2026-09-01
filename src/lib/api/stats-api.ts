@@ -26,6 +26,23 @@ async function get(path: string, query: Record<string, string | number | undefin
   return (await res.json()) as Row[];
 }
 
+/**
+ * Exact row count for a table, without transferring the rows: PostgREST
+ * returns it in the Content-Range header when asked for `count=exact` over
+ * an empty range. Used for the homepage's archive figures so they're the
+ * live size of the mirror rather than numbers baked into the page.
+ */
+export async function getTableCount(table: string): Promise<number | null> {
+  const res = await fetch(`${config.statsApiBaseUrl}/${table}?select=*`, {
+    headers: { Prefer: "count=exact", Range: "0-0" },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok && res.status !== 206) return null;
+  const total = res.headers.get("content-range")?.split("/")[1];
+  const n = Number(total);
+  return Number.isFinite(n) ? n : null;
+}
+
 /** When the daily sync last ran, and the most recent race it has full results for. */
 export async function getSyncStatus(): Promise<Row | null> {
   const rows = await get("/sync_status", { limit: 1 });
@@ -185,7 +202,7 @@ export async function getSchedule(season: number): Promise<Row[]> {
   const rows = await get("/races", {
     season: `eq.${season}`,
     select:
-      "round,race_name,circuit_id,race_date,race_time," +
+      "season,round,race_name,circuit_id,race_date,race_time," +
       "fp1_date,fp1_time,fp2_date,fp2_time,fp3_date,fp3_time," +
       "qualifying_date,qualifying_time," +
       "sprint_qualifying_date,sprint_qualifying_time,sprint_date,sprint_time," +
@@ -360,4 +377,78 @@ export async function getEntityNames(): Promise<Record<string, string>> {
     names[c.constructor_id as string] = c.name as string;
   }
   return names;
+}
+
+// ── Race Details ────────────────────────────────────────────────────────────
+// Ported from the getFull*/getPitStops methods of stats_api_service.dart —
+// same tables, same select lists, same ordering. Backs /race-details/[raceId].
+
+const RESULT_ENTITY_SELECT =
+  "drivers(driver_id,given_name,family_name,code,nationality,permanent_number)," +
+  "constructors(constructor_id,name,nationality)";
+
+/** Full race classification, position order, DNFs sorted last. */
+export function getFullRaceResults(season: number, round: number): Promise<Row[]> {
+  return get("/race_results", {
+    season: `eq.${season}`,
+    round: `eq.${round}`,
+    order: "position.asc.nullslast",
+    select:
+      `grid,position,position_text,points,status,fastest_lap_rank,fastest_lap_time,time_millis,laps,${RESULT_ENTITY_SELECT}`,
+  });
+}
+
+/** sprint_results carries no time/fastest-lap columns — Jolpica's sprint endpoint never provided them. */
+export function getFullSprintResults(season: number, round: number): Promise<Row[]> {
+  return get("/sprint_results", {
+    season: `eq.${season}`,
+    round: `eq.${round}`,
+    order: "position.asc.nullslast",
+    select: `grid,position,position_text,points,status,${RESULT_ENTITY_SELECT}`,
+  });
+}
+
+export function getFullQualifyingResults(season: number, round: number): Promise<Row[]> {
+  return get("/qualifying_results", {
+    season: `eq.${season}`,
+    round: `eq.${round}`,
+    order: "position.asc",
+    select: `position,q1,q2,q3,${RESULT_ENTITY_SELECT}`,
+  });
+}
+
+/** One practice/sprint-qualifying session's computed fastest-lap ranking (OpenF1-sourced). */
+export function getFullPracticeResults(season: number, round: number, session: string): Promise<Row[]> {
+  return get("/practice_results", {
+    season: `eq.${season}`,
+    round: `eq.${round}`,
+    session: `eq.${session}`,
+    order: "position.asc.nullslast",
+    select: `position,best_lap_time,laps,${RESULT_ENTITY_SELECT}`,
+  });
+}
+
+/** Every pit stop of one race — used for the fastest-pit banner stat and the full stop list. */
+export function getPitStops(season: number, round: number): Promise<Row[]> {
+  return get("/pit_stops", {
+    season: `eq.${season}`,
+    round: `eq.${round}`,
+    order: "lap.asc,stop_number.asc",
+    select: "driver_id,stop_number,lap,duration",
+  });
+}
+
+/**
+ * One row per lap = the driver/constructor leading that lap — an entirely
+ * unused table until this route. Only ingested once a race is fully backfilled
+ * (see f1-stats-api's backfill_laps_led.py), so a mid-ingest race legitimately
+ * returns fewer rows than its lap count.
+ */
+export function getLapLeaders(season: number, round: number): Promise<Row[]> {
+  return get("/lap_leaders", {
+    season: `eq.${season}`,
+    round: `eq.${round}`,
+    order: "lap.asc",
+    select: "lap,driver_id,constructor_id,drivers(driver_id,code,family_name),constructors(constructor_id,name)",
+  });
 }

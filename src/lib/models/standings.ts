@@ -46,11 +46,23 @@ export function driverInitials(d: F1Driver): string {
   return d.code ?? `${d.givenName[0] ?? ""}${d.familyName[0] ?? ""}`;
 }
 
-function constructorFromRow(c: Row): F1Constructor {
+export function constructorFromRow(c: Row): F1Constructor {
   return {
     constructorId: (c.constructor_id as string) ?? "",
     name: (c.name as string) ?? "",
     nationality: (c.nationality as string | null) ?? null,
+  };
+}
+
+export function driverFromRow(d: Row): F1Driver {
+  return {
+    driverId: (d.driver_id as string) ?? "",
+    givenName: (d.given_name as string) ?? "",
+    familyName: (d.family_name as string) ?? "",
+    code: (d.code as string | null) ?? null,
+    nationality: (d.nationality as string | null) ?? null,
+    permanentNumber: d.permanent_number != null ? String(d.permanent_number) : null,
+    dateOfBirth: (d.date_of_birth as string | null) ?? null,
   };
 }
 
@@ -61,15 +73,7 @@ export function driverStandingFromRow(r: Row): DriverStanding {
     position: String(r.position ?? ""),
     points: String(r.points ?? "0"),
     wins: String(r.wins ?? "0"),
-    driver: {
-      driverId: (d.driver_id as string) ?? "",
-      givenName: (d.given_name as string) ?? "",
-      familyName: (d.family_name as string) ?? "",
-      code: (d.code as string | null) ?? null,
-      nationality: (d.nationality as string | null) ?? null,
-      permanentNumber: d.permanent_number != null ? String(d.permanent_number) : null,
-      dateOfBirth: (d.date_of_birth as string | null) ?? null,
-    },
+    driver: driverFromRow(d),
     constructor: c ? constructorFromRow(c) : null,
   };
 }
