@@ -28,7 +28,9 @@ import {
   type DriverSteward,
   type StewardState,
   type FastestLapEvent,
+  type LeaderChangeEvent,
   emptyLiveSnapshot,
+  teamColorHex,
   leaderboardEntryFromJson,
   sessionInfoFromJson,
   weatherDataFromJson,
@@ -47,6 +49,7 @@ import {
   clearTrackStatus,
   noSteward,
   fastestLapEventId,
+  leaderChangeEventId,
   formattedLapTime,
 } from "@/lib/models/live";
 
@@ -74,13 +77,38 @@ function emitFastestLap(entry: LeaderboardEntry) {
     driverName: entry.name,
     shortName: entry.shortName,
     lapTime: formattedLapTime(entry.lastLapTime),
-    teamColorHex: entry.teamColor,
+    teamColorHex: teamColorHex(entry.teamColor),
     lapNumber: entry.lapNumber,
   };
   const id = fastestLapEventId(event);
   if (id === lastFastestLapKey) return;
   lastFastestLapKey = id;
   for (const l of fastestLapListeners) l(event);
+}
+
+// ── Leader-change one-shot event bus (same shape as the fastest-lap bus
+// above — an on-track P1 overtake, not a persistent state field). ─────────
+type LeaderChangeListener = (e: LeaderChangeEvent) => void;
+const leaderChangeListeners = new Set<LeaderChangeListener>();
+let lastLeaderChangeKey: string | null = null;
+
+export function onLeaderChange(listener: LeaderChangeListener): () => void {
+  leaderChangeListeners.add(listener);
+  return () => leaderChangeListeners.delete(listener);
+}
+
+function emitLeaderChange(entry: LeaderboardEntry) {
+  const event: LeaderChangeEvent = {
+    driverNumber: entry.driverNumber,
+    driverName: entry.name,
+    shortName: entry.shortName,
+    teamColorHex: teamColorHex(entry.teamColor),
+    lapNumber: entry.lapNumber,
+  };
+  const id = leaderChangeEventId(event);
+  if (id === lastLeaderChangeKey) return;
+  lastLeaderChangeKey = id;
+  for (const l of leaderChangeListeners) l(event);
 }
 
 interface LiveTimingState extends LiveSnapshot {
@@ -512,7 +540,9 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
           const key = String(dn);
           const ex = updated[key];
           if (!ex) continue;
-          stints.sort((a, b) => a.startLap - b.startLap);
+          // stintNumber is the only reliable ordering key — /api/stints
+          // returns rows unordered, and tyre age isn't monotonic.
+          stints.sort((a, b) => a.stintNumber - b.stintNumber);
           const currentTyre = stints.length > 0 ? stints[stints.length - 1].compound : ex.tyre;
           updated[key] = { ...ex, stints, tyre: currentTyre };
           changed = true;
@@ -889,6 +919,15 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
 
         if (next.lapTimeStatus === 3 && ex.lapTimeStatus !== 3) emitFastestLap(next);
 
+        // New race leader (an on-track overtake for P1, not the grid order)
+        // — race/sprint only, and only once the race has actually started
+        // so a pre-lights-out grid-position "change" can't fire it.
+        const sessionType = state.sessionInfo?.type.toLowerCase() ?? "";
+        const isRaceSession = sessionType === "race" || sessionType === "sprint";
+        if (isRaceSession && state.currentLap != null && next.position === 1 && ex.position !== 1) {
+          emitLeaderChange(next);
+        }
+
         const dn = ex.driverNumber;
         const lapChanged = next.lapNumber != null && next.lapNumber !== ex.lapNumber;
         const sectorBaseline = lapChanged ? [null, null, null] : (newSectors[dn] ?? [null, null, null]);
@@ -1120,9 +1159,11 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
             const idx = parseInt(idxStr, 10);
             if (Number.isNaN(idx)) continue;
             while (mergedStints.length <= idx) {
-              mergedStints.push({ compound: "UNKNOWN", isNew: false, startLap: 0, laps: 0 });
+              mergedStints.push({ compound: "UNKNOWN", isNew: false, tyreAgeAtStart: 0, lapsRun: 0, stintNumber: 0 });
             }
             const cur = mergedStints[idx];
+            const age = toIntOrNull(patch.StartLaps) ?? cur.tyreAgeAtStart;
+            const total = toIntOrNull(patch.TotalLaps);
             mergedStints[idx] = {
               compound: Object.prototype.hasOwnProperty.call(patch, "Compound")
                 ? (patch.Compound as string).toUpperCase()
@@ -1130,8 +1171,11 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
               isNew: Object.prototype.hasOwnProperty.call(patch, "New")
                 ? patch.New === "true" || patch.New === true
                 : cur.isNew,
-              startLap: toIntOrNull(patch.StartLaps) ?? cur.startLap,
-              laps: toIntOrNull(patch.TotalLaps) ?? cur.laps,
+              tyreAgeAtStart: age,
+              // TotalLaps is cumulative life — subtract age or a refitted
+              // set double-counts the laps carried in, same as tyreStintFromJson.
+              lapsRun: total != null ? Math.min(Math.max(total - age, 0), total) : cur.lapsRun,
+              stintNumber: idx + 1,
             };
           }
         } else if (Array.isArray(rawStints)) {

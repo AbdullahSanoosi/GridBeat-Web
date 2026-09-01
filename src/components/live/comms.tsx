@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { RaceControlMessage, PitStop, TeamRadioMessage } from "@/lib/models/live";
 import { formattedPitDuration, pitStopTimeStr } from "@/lib/models/live";
 import { useRadioPlaybackStore } from "@/lib/live/radio-playback-store";
@@ -36,7 +36,9 @@ function categoryColor(m: RaceControlMessage): string {
 export function RaceControlFeed({ messages }: { messages: RaceControlMessage[] }) {
   return (
     <div className="flex flex-col gap-2">
-      {messages.length === 0 && <p className="text-sm text-(--color-text-muted)">No messages yet.</p>}
+      {messages.length === 0 && (
+        <p className="text-sm text-(--color-text-muted)">Race control messages on the way — brief server sync.</p>
+      )}
       {messages.map((m, i) => (
         <RaceControlTile key={`${m.utc}-${i}`} message={m} isLatest={i === 0} />
       ))}
@@ -55,6 +57,7 @@ function RaceControlTile({ message, isLatest }: { message: RaceControlMessage; i
       }}
     >
       <div className="mb-1 flex items-center gap-2">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-[10px] font-black tracking-wider" style={{ color }}>
           {message.category.toUpperCase()}
         </span>
@@ -106,6 +109,14 @@ export function TeamRadioList({ messages }: { messages: TeamRadioMessage[] }) {
   const playingUrl = useRadioPlaybackStore((s) => s.playingUrl);
   const setPlayingUrl = useRadioPlaybackStore((s) => s.setPlayingUrl);
 
+  // Stop playback when leaving the live dashboard entirely — without this,
+  // switching off the Comms tab mid-clip orphans the Audio() instance and
+  // it keeps playing in the background with no UI left to pause it (see
+  // commentary-player.tsx, which does this same cleanup for the same reason).
+  useEffect(() => {
+    return () => audioRef.current?.pause();
+  }, []);
+
   function toggle(url: string) {
     if (playingUrl === url) {
       audioRef.current?.pause();
@@ -121,7 +132,7 @@ export function TeamRadioList({ messages }: { messages: TeamRadioMessage[] }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {messages.length === 0 && <p className="text-sm text-(--color-text-muted)">No team radio yet.</p>}
+      {messages.length === 0 && <p className="text-sm text-(--color-text-muted)">No team radio for this session.</p>}
       {messages.map((m, i) => {
         const isPlaying = playingUrl === m.recordingUrl;
         return (

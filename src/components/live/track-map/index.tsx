@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useLiveTimingStore } from "@/lib/live/store";
 import { fetchTrackData, type TrackData } from "@/lib/api/multiviewer";
+import { sortedLeaderboard } from "@/lib/models/live";
+import { MapLegend } from "@/components/live/track-map/legend";
 
 /**
  * The 3D scene (three.js + @react-three/fiber + @react-three/drei) is a
@@ -21,6 +23,7 @@ export function TrackMap() {
   const sessionInfo = useLiveTimingStore((s) => s.sessionInfo);
   const trackDots = useLiveTimingStore((s) => s.trackDots);
   const carPositions = useLiveTimingStore((s) => s.carPositions);
+  const leaderboard = useLiveTimingStore((s) => s.leaderboard);
   const [trackData, setTrackData] = useState<TrackData | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
@@ -73,6 +76,7 @@ export function TrackMap() {
       >
         ⌖
       </button>
+      <MapLegend entries={sortedLeaderboard({ leaderboard })} />
     </div>
   );
 }

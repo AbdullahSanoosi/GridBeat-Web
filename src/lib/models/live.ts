@@ -57,30 +57,55 @@ export function driverTeamColor(d: LiveDriver): string {
 }
 
 // ── Tyre stint ───────────────────────────────────────────────────────────────
+// Ported from GridBeat (Flutter) TyreStint.fromJson/fromRestJson — the two
+// feeds describe the SAME stint in different units (WS: StartLaps = tyre age
+// when fitted, TotalLaps = cumulative tyre life; REST: lap_start/lap_end =
+// race-lap boundaries). Both are normalized here into tyreAgeAtStart/lapsRun
+// so a consumer never has to know which feed a stint came from — don't
+// reintroduce raw StartLaps/TotalLaps or lap_start/lap_end field merging
+// across sources, that's exactly the "26-lap stint silently read as 4 laps"
+// bug this normalization exists to prevent.
 
 export interface TyreStint {
   compound: string;
   isNew: boolean;
-  startLap: number;
-  laps: number; // laps completed on this stint (TotalLaps in F1 feed)
+  /** Tyre age (in laps) when this set was fitted. 0 for a fresh set. */
+  tyreAgeAtStart: number;
+  /** Laps driven during this stint. */
+  lapsRun: number;
+  /** 1-based position in the driver's stint sequence, 0 if unknown — the
+   * only reliable ordering key (REST rows arrive unordered, and tyre age
+   * isn't monotonic across a race). */
+  stintNumber: number;
 }
 
 export function tyreStintFromJson(j: Json): TyreStint {
+  const age = Number(j.StartLaps ?? 0);
+  const total = Number(j.TotalLaps ?? 0);
   return {
     compound: (j.Compound ?? "UNKNOWN").toUpperCase(),
     isNew: j.New === "true" || j.New === true,
-    startLap: Number(j.StartLaps ?? 0),
-    laps: Number(j.TotalLaps ?? 0),
+    tyreAgeAtStart: age,
+    // TotalLaps is cumulative life, so laps carried in must come off or a
+    // refitted set double-counts them.
+    lapsRun: Math.min(Math.max(total - age, 0), total),
+    stintNumber: 0,
   };
 }
 
-/** From REST /api/stints — DB-backed, snake_case fields. */
+/** From REST /api/stints — DB-backed, snake_case, race-lap boundaries. */
 export function tyreStintFromRestJson(j: Json): TyreStint {
+  const age = Number(j.tyre_age_at_start ?? 0);
+  const start = Number(j.lap_start ?? 0);
+  const end = Number(j.lap_end ?? 0);
+  const rawNew = j.new ?? j.is_new;
   return {
     compound: (j.compound ?? "UNKNOWN").toUpperCase(),
-    isNew: j.new === true,
-    startLap: Number(j.lap_start ?? 0),
-    laps: Number(j.lap_end ?? 0),
+    isNew: rawNew == null ? age === 0 : rawNew === true || rawNew === "true",
+    tyreAgeAtStart: age,
+    // Inclusive range: laps 3..21 is 19 laps, not 18.
+    lapsRun: end >= start ? end - start + 1 : 0,
+    stintNumber: Number(j.stint_number ?? 0),
   };
 }
 
@@ -209,6 +234,23 @@ export function fastestLapEventId(e: FastestLapEvent): string {
   return `${e.driverNumber}-${e.lapNumber}-${e.lapTime}`;
 }
 
+// ── Leader-change event ─────────────────────────────────────────────────────
+// Same one-shot-signal shape as FastestLapEvent above, for an on-track P1
+// overtake (race/sprint only, after lights-out — see store.ts's emission
+// rule in applyTimingData).
+
+export interface LeaderChangeEvent {
+  driverNumber: number;
+  driverName: string;
+  shortName: string;
+  teamColorHex: string;
+  lapNumber: number | null;
+}
+
+export function leaderChangeEventId(e: LeaderChangeEvent): string {
+  return `${e.driverNumber}-${e.lapNumber}`;
+}
+
 // ── Weather ──────────────────────────────────────────────────────────────────
 
 export interface WeatherData {
@@ -292,6 +334,47 @@ export function trackStatusFromJson(json: Json): TrackStatus {
 }
 
 export const clearTrackStatus: TrackStatus = { status: "1", message: "AllClear" };
+
+/**
+ * Ported from TrackStatusInfo in the Flutter app's app_constants.dart.
+ * The feed sends a bare numeric code; `message` is a terse F1 token
+ * ("AllClear", "SCDeployed") that isn't presentable, so map the code.
+ */
+export function trackStatusLabel(code: string): string {
+  switch (code) {
+    case "1":
+      return "ALL CLEAR";
+    case "2":
+      return "YELLOW FLAG";
+    case "4":
+      return "SAFETY CAR";
+    case "5":
+      return "RED FLAG";
+    case "6":
+      return "VSC";
+    case "7":
+      return "VSC ENDING";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+export function trackStatusColor(code: string): string {
+  switch (code) {
+    case "1":
+      return "var(--color-success)";
+    case "2":
+    case "4":
+    case "6":
+      return "var(--color-warning)";
+    case "5":
+      return "var(--color-error)";
+    case "7":
+      return "#FF6F00";
+    default:
+      return "var(--color-text-muted)";
+  }
+}
 
 // ── Race control ─────────────────────────────────────────────────────────────
 
