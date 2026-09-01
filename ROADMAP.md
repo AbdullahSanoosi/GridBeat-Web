@@ -25,7 +25,7 @@ quality measure — but the shape of the gap is real.
 | Results / archives | 995 | 281 | **Phase 3 done** |
 | Standings | 811 | 286 | **Phase 3 done** |
 | Schedule | 782 | 278 | **Phase 3 done** |
-| Stats hub | 526 | 46 | Thin |
+| Stats hub | 526 | 118 | **Phase 3 done** |
 | Hall of Fame (3 screens) | 1427 | 162 | Thin |
 | News | 478 | 126 | Thin |
 | Live Timing | 2634 | 369 | **At parity** |
@@ -479,8 +479,25 @@ than guessing at the OpenF1 driver-number mapping from the frontend.
       beyond the documented Supabase DNS failures, in fresh isolated
       tabs throughout. `tsc`/`lint`/`build` all clean.
 
-- [ ] **3.6** Stats hub — a real catalog over all 114 metric keys, grouped
-      by entity type
+- [x] **3.6** Stats hub — the catalog itself (`statsCategories`, 9
+      categories × ~35 metrics ported from `stats_hub_screen.dart`) was
+      **already a complete port**; only the page rendering it was thin —
+      a plain flat list with no card styling, no data-freshness footer.
+      ("All 114 metric keys" in the original roadmap wording overstates
+      what the hub itself should show — the Dart source's own comment is
+      explicit that niche variants (per-circuit, per-team, by-nation,
+      firsts/lasts) belong on Driver/Constructor/Circuit detail screens,
+      not this top-level hub; the hub is a **curated shortlist** by
+      design, not the full catalog.) Added `_QualiToRaceEntry`'s gradient
+      standout card and `_LastUpdatedFooter` — real sync freshness off
+      `sync_status` (`getSyncStatus()` already existed, just never
+      called from this page), reading "1 Sept 2026 · Through Dutch Grand
+      Prix · Race" from live data. Category/metric rows got the bordered-
+      card-with-dividers treatment in place of a bare link list. The
+      leaderboard page itself (`/stats/[metricKey]`) already existed and
+      needed no changes — confirmed still working (driver/constructor
+      toggle, real 106-Hamilton-win data). Verified: all 9 categories
+      render, zero console errors in an isolated tab, no mobile overflow.
 - [ ] **3.7** Hall of Fame — split driver/constructor screens
 - [ ] **3.8** Driver + constructor details — close the gap to the Flutter
       versions
