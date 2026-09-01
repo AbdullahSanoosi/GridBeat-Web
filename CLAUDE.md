@@ -206,10 +206,80 @@ the lap-time/current-lap-elapsed-seconds bucketing math was verified against
 synthetic samples (a standalone Node script, not committed) since the only
 live/replay session available during this session's testing wasn't actually
 streaming CarData (WS inspection showed just one DriverList snapshot +
-Heartbeats — a backend/session characteristic, not a component bug, same
-class of thing as the race-control-empty-for-a-session note below). Re-verify
+Heartbeats — a backend/session characteristic, not a component bug). Re-verify
 pixel output against a real live/replay session with actual CarData traffic
 before trusting the chart rendering further.
+
+**Update 2026-09-02 — Live Timing redesign:** the 4-tab layout above
+(Tower/Comms/Map/Telemetry, one visible at a time) was replaced with a
+single-screen dashboard after the user reviewed it live and asked for
+"everything on screen" instead of tab-switching, plus a non-modal way to
+inspect a driver's telemetry. `src/app/live/page.tsx` now lays out
+(desktop, `xl:` and up): Timing Tower + a Pit Stops/Team Radio row on the
+left, Track Map + Driver Telemetry + Race Control stacked on the right;
+below `xl` it's one stacked column in the same reading order — still no
+tabs anywhere, just a normal scroll on narrow viewports. The old
+click-a-row-to-open-a-full-height-slide-over pattern
+(`TelemetrySheet`, `fixed inset-y-0 right-0` + a dimming backdrop) is gone;
+`src/components/live/telemetry-sheet.tsx` now exports `TelemetryPanel`, an
+always-present in-flow card that re-renders for whichever driver's Tower
+row was last clicked (`TowerRow` gained an `isSelected` prop — a primary-
+color left border + tint), defaulting to the race leader so it's never
+empty on load. `TelemetryCompare` (the multi-driver comparison charts,
+previously the 4th tab) moved to its own full-width "TELEMETRY COMPARE"
+section below the main grid — it's a wide multi-metric chart tool, not a
+side-panel fit. `TrackMap` gained an optional `height` prop (default 600,
+unchanged for future callers) so it can run smaller (320px) in the side
+column without touching its own layout logic. Comms was tried as one
+combined scrollable card first, then split into three independent widgets
+(Race Control, Pit Stops, Team Radio) per direct user feedback, then
+rearranged twice more by feedback into its final position above. Race
+Control's height is a plain fixed `maxHeight={675}` tuned empirically so
+its bottom edge lines up with the Pit Stops/Team Radio row on a typical
+20-driver grid — **a real CSS trap was hit and reverted while trying to do
+this "properly"**: making it `flex-1` inside an auto-height CSS Grid row
+(so it would dynamically absorb whatever space is actually left, matching
+any driver-count/session) blew its rendered height up to 33,789px, because
+an auto-sized grid track measures a `flex: 1 1 0%` item's *intrinsic*
+content size (i.e. all 329 race-control messages unclamped) before stretch
+ever applies — a known CSS interaction between intrinsic track sizing and
+flex-basis-0 items, not a React bug. Confirmed via `getBoundingClientRect()`
+before reverting, not just visually. If ["Race Control" or
+any comms widget needs true dynamic height-matching again, that needs an
+explicit bounded height on the grid container (e.g. real viewport-height
+math), not `flex-1` inside `auto` grid tracks — don't re-attempt the same
+approach expecting a different result.
+
+**Same pass — real backend bug fix, not a redesign change:** race control
+messages went permanently empty after a session ended, even though the
+REST endpoint (`/api/racecontrol`) genuinely had them (confirmed directly:
+329 real messages for the last Dutch GP session via `curl`). Root cause:
+`applyInitialSnapshot()` in `store.ts` (the WS full-state-snapshot handler,
+which the code's own comment already noted "runs on every WS reconnect,
+not just a genuine new session") unconditionally sets `raceControl` from
+the snapshot's own embedded `RaceControlMessages.Messages` — real for a
+still-live session, empty for one that's already ended — and then calls
+`bootstrapTeamRadio()`/`bootstrapPitStops()`/`bootstrapStints()` to
+re-fetch each via REST afterward, but was missing the equivalent
+`bootstrapRaceControl()` call. Pit stops and team radio therefore always
+recovered from a reconnect wipe; race control never did. Fixed by adding
+the missing call alongside the other three. Verified live, before and
+after: Comms → Race Control showed "Race control messages on the way" pre-
+fix, real flag/DRS/steward messages post-fix, same session, same reload.
+
+**Same pass — sidebar made retractable:** `src/components/layout/sidebar.tsx`'s
+desktop `<aside>` (global, every route) collapses to a `w-16` icon-only
+rail via a small toggle button, so a wide dashboard page like the redesigned
+`/live` can claim the extra ~176px. Each `NAV_ITEMS` entry gained an emoji
+`icon` (no icon library in this project — matches the emoji convention
+already used on the Stats hub/Hall of Fame/Learn F1 pages). The
+collapsed/expanded choice persists in `localStorage` (`gridbeat-sidebar-
+collapsed`) via the same `useSyncExternalStore` idiom `useMounted()` uses —
+not `useEffect` + `setState`, which is exactly the "setState synchronously
+in an effect" case `eslint-plugin-react-hooks` flags, and which a first
+implementation attempt hit directly. Mobile's slide-over drawer is
+unaffected (`collapsed` is only ever passed on the desktop `<aside>`; the
+drawer's own `NavLinks` call omits it and always renders full labels).
 
 **Done — live broadcast commentary audio:** ported from the Flutter repo's
 `feature/commentary-audio` branch (not `develop`/`main` — that branch has
@@ -1028,10 +1098,13 @@ directory for most of the session was the Flutter repo, not this one.
 
 Live-tested against the real backend's actual data (a completed Dutch GP
 race replay) with zero console errors: full leaderboard with correct sector
-colors/tyres/PIT/DNF/gap columns, weather panel, race control feed (empty
-for this session — see the code comment in `store.ts` on why that's a
-faithful port of a real Flutter-app asymmetry, not a bug), pit stops, team
-radio with transcripts, fastest-lap overlay wiring, and the track map's data
+colors/tyres/PIT/DNF/gap columns, weather panel, race control feed (a real
+329-message REST-backed feed once the bug documented below under "Live
+Timing redesign" was fixed — the "faithful Flutter-app asymmetry, not a
+bug" explanation this line used to give was wrong; there's no such comment
+in `store.ts` and never was, and a live-page redesign session eventually
+traced it to a genuine store.ts bug and fixed it, not a Flutter-parity
+gap), pit stops, team radio with transcripts, fastest-lap overlay wiring, and the track map's data
 pipeline (position interpolation engine confirmed producing non-empty canvas
 output via pixel inspection, though the *visual* layout bug in gotcha #5 was
 only caught by the user's own browser, not this session's testing pane —
