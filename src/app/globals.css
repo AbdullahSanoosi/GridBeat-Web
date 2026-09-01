@@ -95,19 +95,94 @@ body {
   font-family: var(--font-f1), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Fastest-lap overlay entrance (components/live/fastest-lap-overlay.tsx). */
-@keyframes fastest-lap-in {
+/*
+ * Event-banner entrance (fastest-lap-overlay.tsx, leader-change-overlay.tsx)
+ * — fade + slide-in-from-left, mirrors the Flutter originals' .fadeIn() +
+ * .slideX(begin: -0.10, curve: easeOutCubic). Shared by both banners; only
+ * the accent color (purple vs. gold) differs between them.
+ */
+@keyframes event-banner-in {
   from {
     opacity: 0;
-    transform: translateY(-12px);
+    transform: translateX(-10%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-event-banner-in {
+  animation: event-banner-in 0.42s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/*
+ * Shimmer sheen sweep, layered on top of an event banner — mirrors the
+ * Flutter originals' .shimmer(delay: 220ms, duration: 1100ms). A diagonal
+ * highlight band travels left-to-right once, 220ms after the banner starts
+ * appearing (matched via animation-delay on the overlay element itself,
+ * not by delaying this keyframe).
+ */
+@keyframes shimmer-sweep {
+  from {
+    background-position: -150% 0;
+  }
+  to {
+    background-position: 150% 0;
+  }
+}
+.animate-shimmer-sweep {
+  background: linear-gradient(75deg, transparent 40%, rgb(255 255 255 / 0.35) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: shimmer-sweep 1.1s ease-out 0.22s 1;
+}
+
+/* Leaderboard row entrance, staggered per-row via animation-delay in JS —
+   mirrors the Flutter Tower's .animate(delay: i*25ms).fadeIn(). Fires once
+   per driver's first appearance this screen visit, never replayed on a
+   later WS tick (see tower-row.tsx's "seen" tracking). */
+@keyframes row-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-row-in {
+  animation: row-fade-in 0.25s ease-out both;
+}
+
+/* Track-status banner entrance — mirrors the Flutter original's
+   .fadeIn().slideY(begin: -0.3, duration: 300ms). */
+@keyframes banner-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-30%);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-.animate-fastest-lap-in {
-  animation: fastest-lap-in 0.3s ease-out;
+.animate-banner-slide-down {
+  animation: banner-slide-down 0.3s ease-out;
+}
+
+/* Map legend marquee (track-map/legend.tsx) — CSS-only auto-scroll loop.
+   The row is rendered twice back-to-back and this translates by exactly
+   -50% of that doubled width, so the loop point is seamless with no JS
+   measurement needed (unlike the Flutter original, which measures the row
+   once via LayoutBuilder to compute its own loop distance). */
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee-scroll 40s linear infinite;
 }
 
 /*

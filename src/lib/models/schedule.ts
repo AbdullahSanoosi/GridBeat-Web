@@ -47,6 +47,43 @@ export function allSessions(s: RaceSessions): NamedSession[] {
   return out;
 }
 
+/**
+ * The next session to run anywhere on the calendar — practice, sprint
+ * qualifying, sprint, qualifying or the race itself, whichever comes first.
+ *
+ * A weekend is five or six sessions, so "next race" is the wrong unit for
+ * anything answering "what's on next": through a Friday, the next thing to
+ * happen is FP1, not Sunday's grand prix.
+ */
+export interface UpcomingSession {
+  race: F1Race;
+  /** "Practice 1", "Qualifying", "Race", … */
+  name: string;
+  at: Date;
+  /** False when the API gave a date but no UTC time. */
+  timed: boolean;
+}
+
+export function nextSession(races: F1Race[], now: Date = new Date()): UpcomingSession | null {
+  let best: UpcomingSession | null = null;
+  for (const race of races) {
+    const candidates: { name: string; s: SessionTime }[] = allSessions(race.sessions).map((n) => ({
+      name: n.name,
+      s: n.session,
+    }));
+    if (race.date) candidates.push({ name: "Race", s: { date: race.date, time: race.time ?? null } });
+
+    for (const c of candidates) {
+      const at = sessionDateTime(c.s);
+      if (Number.isNaN(at.getTime()) || at.getTime() <= now.getTime()) continue;
+      if (!best || at.getTime() < best.at.getTime()) {
+        best = { race, name: c.name, at, timed: hasTime(c.s) };
+      }
+    }
+  }
+  return best;
+}
+
 export interface F1Circuit {
   circuitId: string;
   circuitName: string;
