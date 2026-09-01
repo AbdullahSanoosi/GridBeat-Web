@@ -638,7 +638,37 @@ completely independent of the 3D rendering, so 4.3 stayed in scope as a
       "add a field") — every route ships a correct title/description now,
       which is the part that actually breaks link previews when missing;
       add generated OG images as a separate pass if/when it's worth it.
-- [ ] **5.5** Re-verify the homepage WS connection cost before public launch
+- [ ] **5.5** Re-verify the homepage WS connection cost before public launch —
+      **partially checked, real capacity question still open.** Confirmed
+      via source, not assumption: `Hero`'s `useEffect(() => connect(), ...)`
+      calls into `useLiveTimingStore`'s `start()` ([store.ts:1273](src/lib/live/store.ts:1273)),
+      which is guarded by a module-level `started` flag over a
+      module-singleton `LiveWebSocketClient` — so it opens **exactly one**
+      real WS connection per browser tab no matter how many components
+      call `connect()` (Hero, `/live`, anywhere else), and `disconnect()`
+      is never called from an effect cleanup anywhere, so that one
+      connection outlives navigating away from `/` for the rest of the
+      tab's life. Both of those match what this file already documented —
+      nothing has drifted since the original note was written.
+      What's still unverified: **concurrent-connection capacity under real
+      marketing-page traffic**, which is the actual thing "before public
+      launch" was asking about (the earlier `sar`/docker-stats headroom
+      check was against *dashboard* users actively on `/live` during a
+      real race, not the "every anonymous homepage visitor opens one"
+      pattern this page adds — a materially different load shape).
+      Checking that needs the box's own numbers (`ss -tnp` connection
+      count, per-connection memory on the live-timing service), and this
+      session's SSH key for the Oracle box (`Oracle Server/f1box_sajjad.key`)
+      isn't authorized server-side yet — every username tried came back
+      `Permission denied (publickey)`, and adding it is the user's action,
+      not something to work around. **Two honest options once that's
+      checked:** the connection is cheap enough at real traffic volumes
+      and this stays as-is, or it isn't and the fix is a real product
+      decision (defer `connect()` behind a delay/interaction, or don't
+      call it from `Hero` at all and let `SessionStrip`'s existing
+      schedule-fallback path carry the marketing page) — not something to
+      decide unilaterally from this session. Left open rather than marked
+      done or silently changed.
 
 ---
 
