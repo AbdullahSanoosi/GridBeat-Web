@@ -547,13 +547,58 @@ than guessing at the OpenF1 driver-number mapping from the frontend.
 ## Phase 4 — Learn F1 `/learn`
 
 Source: `learn/` (7 chapters, `lessons.dart`, `legend_cars.dart`,
-`penalty_guide.dart`). Web-appropriate chapters only.
+`penalty_guide.dart`).
 
-- [ ] **4.1** `/learn` hub — 7 chapters, status badges
-- [ ] **4.2** `/learn/penalties` — penalty guide with real incidents
-- [ ] **4.3** `/evolution` — 10 legend cars, scrubbable timeline
-- [ ] **4.4** `/tyres` — compound comparison
-- [ ] Out of scope: `/car`, `/car-airflow` (3D viewer is mobile-only)
+**Scope correction before building anything:** the original 4.4 line said
+"`/tyres` — compound comparison," which doesn't match the source. Checked
+`app_router.dart`: `/tyres` resolves to the exact same `CarViewerScreen`
+as `/car`/`/car-airflow` (`ViewerExperience.tyres`, `tyres.html`, its own
+downloaded GLB) — the same hardened-WebView-plus-3D-model infrastructure
+already ruled mobile-only, not a lightweight data page. There's no
+separate 2D compound-spec model anywhere in the app to port instead
+(`TyreColors.forCompound` in `app_constants.dart` is just a chip-color
+switch, already ported to `circuitColor`'s sibling `tyreLabel`). `/tyres`
+moves to Out of scope, alongside `/car`/`/car-airflow`, for the same
+reason. Evolution looked like it might have the same problem —
+`evolution_screen.dart` also drives a WebView + per-car GLB swap — but
+`legend_cars.dart`'s data (name/year/blurb/winRate/stat rows) is
+completely independent of the 3D rendering, so 4.3 stayed in scope as a
+2D timeline instead of a 3D port.
+
+- [x] **4.1** `/learn` hub — ports `learn_screen.dart` + `lessons.dart`
+      verbatim (progress strip, numbered chapter cards, payoff line).
+      Three chapters (Anatomy/Rubber/Airflow) show a `MOBILE APP` badge
+      instead of a dead link — same "tell the truth about what's finished"
+      principle the Flutter file's own doc comment states, applied to a
+      platform gap instead of a not-yet-built one. Dominance keeps its
+      `SOON` badge, matching upstream (`LessonStatus.comingSoon`, no
+      route in Flutter either).
+- [x] **4.2** `/learn/penalties` — ports `penalty_guide.dart` (16 offence
+      kinds, verbatim what/why/typical copy) + `penalty_guide_provider.dart`'s
+      classification/counting logic, reusing the `getFiaDecisions`/
+      `FiaDecision` plumbing the Stewards' Room already built rather than
+      a second FIA client. Verified live: 362 of this season's decisions
+      classified, Track Limits on top at 94× (Causing a Collision 49×,
+      Race Director's Instructions 41×, down to Red Flag at 3×) — the
+      same "most-common-first" shape the Flutter comment describes.
+      Expanding a card shows real stewards' reason text (spot-checked:
+      three separate Lance Stroll track-limits infringements from Round 9,
+      word-for-word from the source documents, not paraphrased).
+- [x] **4.3** `/evolution` — ports `legend_cars.dart`'s 10 cars verbatim
+      (blurb/win-rate/stat rows) as a 2D scrubbable timeline: one large
+      focus card plus a year-dot rail, `‹`/`›` and dot-click both scrub.
+      Renders each car's own accent as a radial glow instead of the
+      Flutter version's 3D model — see the scope note above for why.
+      Verified live: Lotus 88 (no win rate) and McLaren MP4/4 (94% win
+      rate, bar renders) both scrub correctly, zero console errors beyond
+      the pre-existing site-wide hydration warning (reproduces on
+      `/schedule` too, untouched this session — see CLAUDE.md).
+- [x] Out of scope: `/car`, `/car-airflow`, `/tyres` — all three are the
+      same hardened-WebView 3D viewer shell (`CarViewerScreen`), genuinely
+      mobile-only infrastructure (bundled JS shell + downloaded GLB +
+      loopback asset server, see `../gridbeat/CLAUDE.md`'s "3D Car
+      Viewer" section). No data-only fallback exists for any of the
+      three the way `legend_cars.dart` did for Evolution.
 
 ## Phase 5 — Polish
 
