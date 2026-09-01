@@ -9,6 +9,7 @@ import { staleTime } from "@/lib/query/ttl";
 import { circuitColor } from "@/lib/theme/colors";
 import { circuitLeaderboardRows } from "@/lib/models/circuit-stats";
 import { useMounted } from "@/hooks/use-mounted";
+import { Skeleton, SkeletonRows } from "@/components/shared/skeleton";
 
 /**
  * Ports CircuitLeaderboardScreen — the full ranked list behind a Circuit
@@ -46,7 +47,11 @@ export default function CircuitLeaderboardPage({ params }: { params: Promise<{ c
   if (!mounted || circuitQuery.isLoading) {
     return (
       <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-        <p className="text-(--color-text-secondary)">Loading…</p>
+        <div className="mx-auto max-w-xl">
+          <Skeleton className="mb-1 h-7 w-2/3" />
+          <Skeleton className="mb-6 h-3 w-1/3" />
+          <SkeletonRows count={6} className="h-14" />
+        </div>
       </main>
     );
   }
@@ -68,11 +73,12 @@ export default function CircuitLeaderboardPage({ params }: { params: Promise<{ c
         </p>
 
         <div className="mt-6 flex flex-col gap-2">
-          {leaderboardQuery.isLoading
-            ? [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-(--color-surface-elevated)" />)
-            : rows.length === 0
-              ? <p className="text-sm text-(--color-text-muted)">No data for this metric yet.</p>
-              : rows.map((row) => (
+          {leaderboardQuery.isLoading ? (
+            <SkeletonRows count={6} className="h-14" />
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-(--color-text-muted)">No data for this metric yet.</p>
+          ) : (
+            rows.map((row) => (
                   <div key={row.rank} className="flex items-center gap-3 rounded-xl bg-(--color-surface-elevated) px-4 py-3">
                     <span
                       className="w-7 shrink-0 font-[var(--font-f1)] text-base font-black"
@@ -85,7 +91,8 @@ export default function CircuitLeaderboardPage({ params }: { params: Promise<{ c
                       {row.value}
                     </span>
                   </div>
-                ))}
+                ))
+          )}
         </div>
       </div>
     </main>

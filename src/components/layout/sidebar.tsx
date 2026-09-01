@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSectionStore } from "@/lib/nav/section-store";
 
 /**
  * The dashboard shell's nav — a persistent left sidebar on desktop
@@ -26,10 +27,16 @@ const NAV_ITEMS = [
 ] as const;
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const lastSection = useSectionStore((s) => s.lastSection);
+  // A detail page (driver/constructor/race-details) matches no nav item's
+  // own prefix at all — fall back to whichever section the visitor was
+  // actually last on, so it isn't just permanently unhighlighted there.
+  const matchesDirectly = NAV_ITEMS.some((item) => pathname.startsWith(item.href));
+
   return (
     <nav className="flex flex-col gap-1">
       {NAV_ITEMS.map((item) => {
-        const active = pathname.startsWith(item.href);
+        const active = matchesDirectly ? pathname.startsWith(item.href) : item.href === lastSection?.href;
         return (
           <Link
             key={item.href}
@@ -52,6 +59,17 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const setLastSection = useSectionStore((s) => s.setLastSection);
+
+  // Record whichever nav section this pathname actually belongs to, so
+  // detail pages with more than one entry point (driver/constructor from
+  // Standings/Hall of Fame/Stats; race-details from Schedule/Race
+  // Archives) can render a "back to X" link that matches where the
+  // visitor really came from instead of a single hardcoded guess.
+  useEffect(() => {
+    const match = NAV_ITEMS.find((item) => pathname.startsWith(item.href));
+    if (match) setLastSection({ href: match.href, label: match.label });
+  }, [pathname, setLastSection]);
 
   // The homepage is a full-bleed marketing/entry page, not a dashboard
   // screen — no persistent chrome boxing in the hero. Every other route

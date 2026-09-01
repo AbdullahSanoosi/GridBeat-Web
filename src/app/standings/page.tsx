@@ -9,6 +9,7 @@ import { staleTime } from "@/lib/query/ttl";
 import { config } from "@/lib/config";
 import { teamColor } from "@/lib/theme/colors";
 import { useMounted } from "@/hooks/use-mounted";
+import { Skeleton, SkeletonRows } from "@/components/shared/skeleton";
 import {
   driverStandingFromRow,
   constructorStandingFromRow,
@@ -59,7 +60,10 @@ export default function StandingsPage() {
       </div>
 
       {!mounted || active.isLoading ? (
-        <p className="text-(--color-text-secondary)">Loading standings…</p>
+        <>
+          <Skeleton className="mb-6 h-32 w-full" />
+          <SkeletonRows count={10} className="h-14" />
+        </>
       ) : active.isError ? (
         <p className="text-(--color-error)">
           Failed to load standings: {active.error instanceof Error ? active.error.message : String(active.error)}

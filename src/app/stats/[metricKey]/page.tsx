@@ -7,6 +7,7 @@ import { getComputedStats, getEntityNames } from "@/lib/api/stats-api";
 import { staleTime } from "@/lib/query/ttl";
 import { useMounted } from "@/hooks/use-mounted";
 import { entityDisplayName, lookupMetric } from "@/lib/models/stats-catalog";
+import { SkeletonRows } from "@/components/shared/skeleton";
 import type { ComputedStat } from "@/lib/api/types";
 
 export default function StatsLeaderboardPage({
@@ -55,7 +56,7 @@ export default function StatsLeaderboardPage({
       </div>
 
       {!mounted || statsQuery.isLoading ? (
-        <p className="text-(--color-text-secondary)">Loading…</p>
+        <SkeletonRows count={10} className="h-11" />
       ) : statsQuery.isError ? (
         <p className="text-(--color-error)">
           Failed to load: {statsQuery.error instanceof Error ? statsQuery.error.message : String(statsQuery.error)}

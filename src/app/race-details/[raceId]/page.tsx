@@ -13,6 +13,8 @@ import { QualifyingResultsTab } from "@/components/race-details/qualifying-resul
 import { PracticeResultsTab } from "@/components/race-details/practice-results";
 import { SprintResultsTab } from "@/components/race-details/sprint-results";
 import { CircuitTab } from "@/components/race-details/circuit-tab";
+import { Skeleton, SkeletonRows } from "@/components/shared/skeleton";
+import { useSectionStore } from "@/lib/nav/section-store";
 
 /**
  * Ports RaceDetailsScreen from race_details_screen.dart. `raceId` is
@@ -42,7 +44,13 @@ export default function RaceDetailsPage({ params }: { params: Promise<{ raceId: 
   if (!mounted || isLoading) {
     return (
       <main className="flex-1 px-6 py-8 md:px-8">
-        <p className="text-(--color-text-secondary)">Loading race…</p>
+        <Skeleton className="mb-4 h-40 w-full" />
+        <div className="mb-4 flex gap-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-8 w-24" />
+          ))}
+        </div>
+        <SkeletonRows count={5} className="h-16" />
       </main>
     );
   }
@@ -62,6 +70,7 @@ export default function RaceDetailsPage({ params }: { params: Promise<{ raceId: 
 }
 
 function RaceDetailsContent({ race, season, round }: { race: F1Race; season: string; round: string }) {
+  const lastSection = useSectionStore((s) => s.lastSection);
   const [now] = useState(() => Date.now());
   const over = (t: { date: string; time: string | null } | null) => t != null && sessionDateTime(t).getTime() < now;
 
@@ -80,11 +89,12 @@ function RaceDetailsContent({ race, season, round }: { race: F1Race; season: str
   const active = tabs.some((t) => t.kind === tab) ? tab : tabs[0].kind;
 
   const qualDate = race.sessions.qualifying?.date ?? "";
+  const back = lastSection ?? { href: "/schedule", label: "Schedule" };
 
   return (
     <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-      <Link href="/schedule" className="mb-4 inline-block text-sm text-(--color-text-muted) hover:text-(--color-text-primary)">
-        ← Schedule
+      <Link href={back.href} className="mb-4 inline-block text-sm text-(--color-text-muted) hover:text-(--color-text-primary)">
+        ← {back.label}
       </Link>
 
       <div className="mb-5 flex gap-1 overflow-x-auto rounded-full bg-(--color-surface-elevated) p-1">

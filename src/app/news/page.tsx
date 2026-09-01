@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getNews, type NewsArticle } from "@/lib/api/news";
 import { useMounted } from "@/hooks/use-mounted";
+import { SkeletonRows } from "@/components/shared/skeleton";
 import type { XPost, XPostsPage } from "@/lib/x-posts";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -41,7 +42,7 @@ export default function NewsPage() {
             LATEST FROM @F1STATSGURU
           </h2>
           {!mounted || postsQuery.isLoading ? (
-            <p className="text-sm text-(--color-text-secondary)">Loading…</p>
+            <SkeletonRows count={5} className="h-24" />
           ) : postsQuery.isError ? (
             <p className="text-sm text-(--color-error)">Couldn&apos;t load posts.</p>
           ) : (
@@ -56,7 +57,7 @@ export default function NewsPage() {
             LATEST HEADLINES
           </h2>
           {!mounted || newsQuery.isLoading ? (
-            <p className="text-sm text-(--color-text-secondary)">Loading…</p>
+            <SkeletonRows count={6} className="h-20" />
           ) : newsQuery.isError ? (
             <p className="text-sm text-(--color-error)">Couldn&apos;t load news.</p>
           ) : (

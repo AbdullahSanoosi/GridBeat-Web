@@ -20,6 +20,7 @@ import {
   type F1Race,
 } from "@/lib/models/schedule";
 import { useMounted } from "@/hooks/use-mounted";
+import { Skeleton, SkeletonRows } from "@/components/shared/skeleton";
 
 /**
  * Ports schedule_screen.dart's _NextRaceHero (round/date pill, live
@@ -56,7 +57,10 @@ export default function SchedulePage() {
       <h1 className="mb-6 font-[var(--font-f1)] text-2xl font-bold">{config.currentSeason} Schedule</h1>
 
       {!mounted || isLoading ? (
-        <p className="text-(--color-text-secondary)">Loading schedule…</p>
+        <>
+          <Skeleton className="mb-6 h-[200px] w-full" />
+          <SkeletonRows count={6} className="h-16" />
+        </>
       ) : isError ? (
         <p className="text-(--color-error)">
           Failed to load schedule: {error instanceof Error ? error.message : String(error)}

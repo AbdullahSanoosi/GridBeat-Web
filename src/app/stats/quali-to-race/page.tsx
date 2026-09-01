@@ -15,6 +15,7 @@ import { staleTime } from "@/lib/query/ttl";
 import { config } from "@/lib/config";
 import { useMounted } from "@/hooks/use-mounted";
 import { RaceProgressionChart } from "@/components/stats/race-progression-chart";
+import { Skeleton } from "@/components/shared/skeleton";
 
 const FIRST_SEASON = 1950;
 
@@ -61,7 +62,13 @@ export default function RaceProgressionPage() {
       <p className="mb-6 text-sm text-(--color-text-secondary)">Position progression, race by race</p>
 
       {!mounted ? (
-        <p className="text-(--color-text-secondary)">Loading…</p>
+        <>
+          <div className="mb-6 flex flex-wrap gap-3">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-56" />
+          </div>
+          <Skeleton className="h-96 w-full" />
+        </>
       ) : (
         <>
           <div className="mb-6 flex flex-wrap gap-3">
@@ -101,7 +108,7 @@ export default function RaceProgressionPage() {
               <Legend />
               <div className="mt-4">
                 {progressionQuery.isLoading ? (
-                  <p className="p-8 text-center text-sm text-(--color-text-secondary)">Loading…</p>
+                  <Skeleton className="h-64 w-full" />
                 ) : progressionQuery.isError ? (
                   <p className="p-8 text-center text-sm text-(--color-error)">Could not load this race&rsquo;s results.</p>
                 ) : (

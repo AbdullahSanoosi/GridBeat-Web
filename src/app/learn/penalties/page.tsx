@@ -8,6 +8,7 @@ import { buildPenaltyGuide, type PenaltyKindStats } from "@/lib/models/penalty-g
 import { staleTime } from "@/lib/query/ttl";
 import { config } from "@/lib/config";
 import { useMounted } from "@/hooks/use-mounted";
+import { SkeletonRows } from "@/components/shared/skeleton";
 
 /**
  * Ports penalty_guide_screen.dart — "why did they get a penalty?", ordered
@@ -44,7 +45,9 @@ export default function PenaltyGuidePage() {
       </p>
 
       {!mounted || query.isLoading ? (
-        <p className="mt-4 text-(--color-text-secondary)">Loading…</p>
+        <div className="mt-6 max-w-2xl">
+          <SkeletonRows count={8} className="h-[68px]" />
+        </div>
       ) : query.isError ? (
         <p className="mt-4 text-(--color-error)">
           Failed to load: {query.error instanceof Error ? query.error.message : String(query.error)}

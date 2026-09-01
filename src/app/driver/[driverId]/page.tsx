@@ -23,6 +23,8 @@ import { driverFullName, driverStandingFromRow, type DriverStanding } from "@/li
 import { findRank, fmtNum } from "@/lib/models/rank";
 import type { ComputedStat, Row } from "@/lib/api/types";
 import { SectionLabel } from "@/components/detail/section-label";
+import { DetailPageSkeleton } from "@/components/shared/skeleton";
+import { useSectionStore } from "@/lib/nav/section-store";
 import { HeroKpi, StatTile, TotalTile, BioGroup } from "@/components/detail/tiles";
 import { RankCard } from "@/components/detail/rank-card";
 import { ChampionshipChart } from "@/components/detail/championship-chart";
@@ -65,6 +67,7 @@ const TEAM_METRICS: [string, string][] = [
 export default function DriverDetailPage({ params }: { params: Promise<{ driverId: string }> }) {
   const { driverId } = use(params);
   const mounted = useMounted();
+  const lastSection = useSectionStore((s) => s.lastSection);
 
   const standingsQuery = useQuery({
     queryKey: ["driver-standings", config.currentSeason],
@@ -104,8 +107,8 @@ export default function DriverDetailPage({ params }: { params: Promise<{ driverI
 
   if (!mounted || standingsQuery.isLoading || namesQuery.isLoading) {
     return (
-      <main className="flex-1 px-8 py-8">
-        <p className="text-(--color-text-secondary)">Loading driver…</p>
+      <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+        <DetailPageSkeleton />
       </main>
     );
   }
@@ -135,10 +138,12 @@ export default function DriverDetailPage({ params }: { params: Promise<{ driverI
   const circuits = circuitsQuery.data ?? [];
   const careerResults = careerResultsQuery.data ?? [];
 
+  const back = lastSection ?? { href: "/standings", label: "Standings" };
+
   return (
     <main className="flex-1 px-8 py-8">
-      <Link href="/standings" className="mb-4 inline-block text-sm text-(--color-text-muted) hover:text-(--color-text-primary)">
-        ← Standings
+      <Link href={back.href} className="mb-4 inline-block text-sm text-(--color-text-muted) hover:text-(--color-text-primary)">
+        ← {back.label}
       </Link>
 
       <Hero

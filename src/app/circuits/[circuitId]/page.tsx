@@ -13,6 +13,7 @@ import { circuitLiveStats } from "@/lib/models/circuit-stats";
 import { CircuitRecords } from "@/components/circuits/circuit-records";
 import { CareerFirstsCard, WinningGridSlotCard } from "@/components/circuits/circuit-firsts";
 import { useMounted } from "@/hooks/use-mounted";
+import { Skeleton } from "@/components/shared/skeleton";
 
 /**
  * Ports circuit_guide_detail_screen.dart's `_Hero`/`_CharacterStrip`/
@@ -69,7 +70,11 @@ export default function CircuitDetailPage({ params }: { params: Promise<{ circui
   if (!mounted || circuitQuery.isLoading) {
     return (
       <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-        <p className="text-(--color-text-secondary)">Loading circuit…</p>
+        <Skeleton className="h-[260px] w-full" />
+        <div className="mt-6 flex flex-col gap-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-40" />
+        </div>
       </main>
     );
   }
@@ -187,7 +192,12 @@ export default function CircuitDetailPage({ params }: { params: Promise<{ circui
           )}
         </div>
 
-        {(detailQuery.isLoading || statsQuery.isLoading) && <p className="mt-6 text-(--color-text-secondary)">Loading details…</p>}
+        {(detailQuery.isLoading || statsQuery.isLoading) && (
+          <div className="mt-6 flex flex-col gap-2">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+        )}
 
         {hasRecords ? (
           <div className="mt-6 flex flex-col gap-6">

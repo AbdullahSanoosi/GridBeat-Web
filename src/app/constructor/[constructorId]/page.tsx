@@ -25,6 +25,8 @@ import { RankCard } from "@/components/detail/rank-card";
 import { ChampionshipChart } from "@/components/detail/championship-chart";
 import { SeasonPointsChart } from "@/components/detail/season-points-chart";
 import { BestCircuitTile } from "@/components/detail/best-circuit-tile";
+import { DetailPageSkeleton } from "@/components/shared/skeleton";
+import { useSectionStore } from "@/lib/nav/section-store";
 
 const CAREER_TOTAL_METRICS: [string, string][] = [
   ["gps", "GRANDS PRIX"],
@@ -59,6 +61,7 @@ const BEST_CIRCUIT_METRICS: [string, string][] = [
 export default function ConstructorDetailPage({ params }: { params: Promise<{ constructorId: string }> }) {
   const { constructorId } = use(params);
   const mounted = useMounted();
+  const lastSection = useSectionStore((s) => s.lastSection);
 
   const standingsQuery = useQuery({
     queryKey: ["constructor-standings", config.currentSeason],
@@ -93,8 +96,8 @@ export default function ConstructorDetailPage({ params }: { params: Promise<{ co
 
   if (!mounted || standingsQuery.isLoading || namesQuery.isLoading) {
     return (
-      <main className="flex-1 px-8 py-8">
-        <p className="text-(--color-text-secondary)">Loading constructor…</p>
+      <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+        <DetailPageSkeleton />
       </main>
     );
   }
@@ -116,10 +119,12 @@ export default function ConstructorDetailPage({ params }: { params: Promise<{ co
   const stats = statsQuery.data ?? [];
   const names = namesQuery.data ?? {};
 
+  const back = lastSection ?? { href: "/standings", label: "Standings" };
+
   return (
     <main className="flex-1 px-8 py-8">
-      <Link href="/standings" className="mb-4 inline-block text-sm text-(--color-text-muted) hover:text-(--color-text-primary)">
-        ← Standings
+      <Link href={back.href} className="mb-4 inline-block text-sm text-(--color-text-muted) hover:text-(--color-text-primary)">
+        ← {back.label}
       </Link>
 
       <Hero titleName={titleName} standing={standing} detail={detail} accent={accent} isCareerMode={isCareerMode} />

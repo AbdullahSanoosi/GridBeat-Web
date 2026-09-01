@@ -13,6 +13,7 @@ import {
 import { staleTime } from "@/lib/query/ttl";
 import { config } from "@/lib/config";
 import { useMounted } from "@/hooks/use-mounted";
+import { SkeletonRows } from "@/components/shared/skeleton";
 import { circuitColor } from "@/lib/theme/colors";
 import {
   archiveRacesFromRows,
@@ -113,7 +114,7 @@ export default function ResultsPage() {
       {mounted && <ArchiveHero />}
 
       {!mounted ? (
-        <p className="text-(--color-text-secondary)">Loading…</p>
+        <SkeletonRows count={6} className="h-24" />
       ) : tab === "races" ? (
         <QueryState query={racesQuery}>{(races) => <RaceCardList races={races} />}</QueryState>
       ) : tab === "drivers" ? (
@@ -136,7 +137,7 @@ function QueryState<T>({
   query: { isLoading: boolean; isError: boolean; error: unknown; data: T | undefined };
   children: (data: T) => React.ReactNode;
 }) {
-  if (query.isLoading) return <p className="text-(--color-text-secondary)">Loading…</p>;
+  if (query.isLoading) return <SkeletonRows count={6} className="h-24" />;
   if (query.isError) {
     return (
       <p className="text-(--color-error)">

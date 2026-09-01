@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDriverHallOfFame, getConstructorHallOfFame } from "@/lib/models/hall-of-fame";
 import { staleTime } from "@/lib/query/ttl";
 import { useMounted } from "@/hooks/use-mounted";
+import { Skeleton, SkeletonRows } from "@/components/shared/skeleton";
 import type { HallOfFameDriver, HallOfFameConstructor } from "@/lib/models/hall-of-fame";
 
 type Tab = "drivers" | "constructors";
@@ -48,7 +49,10 @@ export default function HallOfFamePage() {
       </p>
 
       {!mounted || active.isLoading ? (
-        <p className="text-(--color-text-secondary)">Loading…</p>
+        <>
+          <Skeleton className="mb-6 h-[150px] w-full" />
+          <SkeletonRows count={8} className="h-11" />
+        </>
       ) : active.isError ? (
         <p className="text-(--color-error)">
           Failed to load: {active.error instanceof Error ? active.error.message : String(active.error)}

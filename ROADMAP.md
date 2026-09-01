@@ -602,7 +602,25 @@ completely independent of the 3D rendering, so 4.3 stayed in scope as a
 
 ## Phase 5 — Polish
 
-- [ ] **5.1** Loading skeletons everywhere (no bare "Loading…")
+- [x] **5.1** Loading skeletons everywhere (no bare "Loading…") — new
+      `components/shared/skeleton.tsx` (`Skeleton`, `SkeletonRows`,
+      `DetailPageSkeleton`) consolidates the `animate-pulse rounded-xl
+      bg-(--color-surface-elevated)` shape four race-details tabs and
+      Stewards' Room already hand-rolled, applied to every route that
+      still had a bare `<p>Loading…</p>`: schedule, standings, results
+      (its shared `QueryState` covers all 3 tabs in one fix), stats hub's
+      metric leaderboard, quali-to-race (both the outer page gate and the
+      chart-area spot), circuits index + detail + leaderboard, driver/
+      constructor (`DetailPageSkeleton`, shared since both pages have the
+      same hero/tile-grid/card-row shape), hall of fame, learn/penalties,
+      news (both independent sections), and race-details. Shaped to each
+      page's real content instead of one generic block — a row count/
+      height matching the eventual table, a hero-sized block above a card
+      grid, etc. — so the skeleton doesn't visually jump when data lands.
+      Verified: `tsc`/`lint`/`build` clean, and the circuit leaderboard's
+      ternary restructuring (loading/empty/data) confirmed live by
+      clicking through the real "VIEW ALL" flow from a circuit page,
+      landing on a full 40-row leaderboard with correct data.
 - [ ] **5.2** Empty/error states with real copy
 - [ ] **5.3** Full responsive pass on every new route (320 → 1440)
 - [x] **5.4** OG tags + metadata per route — a `layout.tsx` server component

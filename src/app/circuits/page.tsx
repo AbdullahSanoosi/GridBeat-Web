@@ -8,6 +8,7 @@ import { staleTime } from "@/lib/query/ttl";
 import { config } from "@/lib/config";
 import { circuitColor } from "@/lib/theme/colors";
 import { TrackImage } from "@/components/shared/track-image";
+import { Skeleton } from "@/components/shared/skeleton";
 import { ALL_CIRCUIT_FACTS, forCircuit } from "@/lib/models/circuit-facts";
 import { buildPastCircuits, type PastCircuit } from "@/lib/models/circuit-stats";
 import { isUpcoming, raceFromRow } from "@/lib/models/schedule";
@@ -86,7 +87,14 @@ export default function CircuitGuidePage() {
       </p>
 
       {!mounted || query.isLoading ? (
-        <p className="text-(--color-text-secondary)">Loading circuits…</p>
+        <>
+          <Skeleton className="mb-6 h-[220px] w-full" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 9 }, (_, i) => (
+              <Skeleton key={i} className="h-[72px]" />
+            ))}
+          </div>
+        </>
       ) : query.isError ? (
         <p className="text-(--color-error)">
           Failed to load circuits: {query.error instanceof Error ? query.error.message : String(query.error)}
