@@ -832,6 +832,16 @@ export const useLiveTimingStore = create<LiveTimingState & LiveTimingActions>()(
       const grid = maybeCaptureGrid(lb);
       if (grid) set({ gridPositions: grid });
 
+      // Race control is set unconditionally above from the snapshot's own
+      // embedded RaceControlMessages — real for a session still live, but
+      // empty for one that's already ended (this handler runs on every WS
+      // reconnect, not just a genuine new session, so an ended-session
+      // reconnect wipes whatever bootstrapRaceControl() had already fetched
+      // via REST). Re-bootstrap it the same way the three below already do,
+      // or a post-session reconnect silently loses race control forever —
+      // pit stops/team radio never had this gap because they're refetched
+      // here already; race control was the one left out.
+      bootstrapRaceControl();
       bootstrapTeamRadio();
       bootstrapPitStops();
       bootstrapStints();
