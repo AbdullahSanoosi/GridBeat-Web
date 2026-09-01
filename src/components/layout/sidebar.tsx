@@ -62,7 +62,7 @@ export function Sidebar() {
     <>
       {/* Mobile top bar */}
       <div className="flex items-center justify-between border-b border-(--color-border) bg-(--color-surface) px-4 py-3 lg:hidden">
-        <Link href="/schedule" className="font-[var(--font-f1)] text-lg font-bold tracking-tight">
+        <Link href="/" className="font-[var(--font-f1)] text-lg font-bold tracking-tight">
           GRIDBEAT
         </Link>
         <button
@@ -96,7 +96,7 @@ export function Sidebar() {
 
       {/* Desktop persistent sidebar */}
       <aside className="hidden h-full w-60 shrink-0 flex-col border-r border-(--color-border) bg-(--color-surface) px-4 py-6 lg:flex">
-        <Link href="/schedule" className="mb-8 px-2 font-[var(--font-f1)] text-xl font-bold tracking-tight">
+        <Link href="/" className="mb-8 px-2 font-[var(--font-f1)] text-xl font-bold tracking-tight">
           GRIDBEAT
         </Link>
         <NavLinks pathname={pathname} />
