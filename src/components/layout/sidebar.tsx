@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useSectionStore } from "@/lib/nav/section-store";
 
 /**
@@ -14,19 +14,50 @@ import { useSectionStore } from "@/lib/nav/section-store";
  * column. Grows as each route lands; only link routes that actually exist.
  */
 const NAV_ITEMS = [
-  { href: "/live", label: "Live Timing" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/standings", label: "Standings" },
-  { href: "/stewards-room", label: "Stewards' Room" },
-  { href: "/results", label: "Race Archives" },
-  { href: "/stats", label: "Stats" },
-  { href: "/circuits", label: "Circuit Guide" },
-  { href: "/hall-of-fame", label: "Hall of Fame" },
-  { href: "/learn", label: "Learn F1" },
-  { href: "/news", label: "News" },
+  { href: "/live", label: "Live Timing", icon: "🔴" },
+  { href: "/schedule", label: "Schedule", icon: "📅" },
+  { href: "/standings", label: "Standings", icon: "🏆" },
+  { href: "/stewards-room", label: "Stewards' Room", icon: "⚖️" },
+  { href: "/results", label: "Race Archives", icon: "🗃️" },
+  { href: "/stats", label: "Stats", icon: "📊" },
+  { href: "/circuits", label: "Circuit Guide", icon: "🗺️" },
+  { href: "/hall-of-fame", label: "Hall of Fame", icon: "👑" },
+  { href: "/learn", label: "Learn F1", icon: "🎓" },
+  { href: "/news", label: "News", icon: "📰" },
 ] as const;
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+const COLLAPSE_KEY = "gridbeat-sidebar-collapsed";
+
+const noopSubscribe = () => () => {};
+const collapsedServerSnapshot = () => false;
+function collapsedClientSnapshot(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Same useSyncExternalStore idiom as useMounted() — starts `false` on both
+ * the server render and the client's first (hydration) pass so there's
+ * nothing to mismatch, then picks up the real saved value right after.
+ * `setCollapsed`'s own click handler is a plain event handler, not an
+ * effect, so it can set React state directly with no lint issue.
+ */
+function useStoredCollapsed(): boolean {
+  return useSyncExternalStore(noopSubscribe, collapsedClientSnapshot, collapsedServerSnapshot);
+}
+
+function NavLinks({
+  pathname,
+  onNavigate,
+  collapsed,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+  collapsed?: boolean;
+}) {
   const lastSection = useSectionStore((s) => s.lastSection);
   // A detail page (driver/constructor/race-details) matches no nav item's
   // own prefix at all — fall back to whichever section the visitor was
@@ -42,13 +73,17 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            title={collapsed ? item.label : undefined}
+            className={`flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition-colors ${
+              collapsed ? "justify-center px-0" : "px-3"
+            } ${
               active
                 ? "bg-(--color-primary) text-(--color-on-secondary)"
                 : "text-(--color-text-secondary) hover:bg-(--color-surface-elevated) hover:text-(--color-text-primary)"
             }`}
           >
-            {item.label}
+            <span aria-hidden="true">{item.icon}</span>
+            {!collapsed && <span className="truncate">{item.label}</span>}
           </Link>
         );
       })}
@@ -59,7 +94,21 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const storedCollapsed = useStoredCollapsed();
+  // null = no click yet this session, defer to the stored value (itself
+  // hydration-safe via useSyncExternalStore above); once clicked, the
+  // explicit choice wins for the rest of the session.
+  const [collapsedOverride, setCollapsedOverride] = useState<boolean | null>(null);
+  const collapsed = collapsedOverride ?? storedCollapsed;
   const setLastSection = useSectionStore((s) => s.setLastSection);
+
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    try {
+      localStorage.setItem(COLLAPSE_KEY, String(next));
+    } catch {}
+    setCollapsedOverride(next);
+  };
 
   // Record whichever nav section this pathname actually belongs to, so
   // detail pages with more than one entry point (driver/constructor from
@@ -112,12 +161,33 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Desktop persistent sidebar */}
-      <aside className="hidden h-full w-60 shrink-0 flex-col border-r border-(--color-border) bg-(--color-surface) px-4 py-6 lg:flex">
-        <Link href="/" className="mb-8 px-2 font-[var(--font-f1)] text-xl font-bold tracking-tight">
-          GRIDBEAT
-        </Link>
-        <NavLinks pathname={pathname} />
+      {/* Desktop persistent sidebar — retractable to a slim icon rail so a
+          wide dashboard page (Live Timing) can claim more width. */}
+      <aside
+        className={`hidden h-full shrink-0 flex-col border-r border-(--color-border) bg-(--color-surface) py-6 transition-[width] duration-200 lg:flex ${
+          collapsed ? "w-16 px-2" : "w-60 px-4"
+        }`}
+      >
+        <div className={`mb-8 flex items-center ${collapsed ? "flex-col gap-3" : "justify-between px-2"}`}>
+          {collapsed ? (
+            <Link href="/" className="font-[var(--font-f1)] text-lg font-bold tracking-tight" title="GridBeat">
+              G
+            </Link>
+          ) : (
+            <Link href="/" className="font-[var(--font-f1)] text-xl font-bold tracking-tight">
+              GRIDBEAT
+            </Link>
+          )}
+          <button
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-(--color-border) text-[10px] text-(--color-text-secondary) hover:bg-(--color-surface-elevated) hover:text-(--color-text-primary)"
+          >
+            {collapsed ? "»" : "«"}
+          </button>
+        </div>
+        <NavLinks pathname={pathname} collapsed={collapsed} />
       </aside>
     </>
   );
