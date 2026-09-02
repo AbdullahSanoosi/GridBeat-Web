@@ -1,130 +1,169 @@
-"use client";
-
+import Image from "next/image";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { motion, useReducedMotion } from "motion/react";
-import { getSchedule } from "@/lib/api/stats-api";
-import { staleTime } from "@/lib/query/ttl";
-import { config } from "@/lib/config";
-import { isUpcoming, nextSession, raceFromRow } from "@/lib/models/schedule";
-import { useMounted } from "@/hooks/use-mounted";
 import { Hero } from "@/components/home/hero";
-import { RaceCountdown } from "@/components/home/race-countdown";
+import { AppExperience } from "@/components/home/app-experience";
+import { DashboardPromo } from "@/components/home/dashboard-promo";
+import { ApiAccessSection } from "@/components/home/api-access-section";
 import { TheLap } from "@/components/home/the-lap";
-import { TelemetrySection } from "@/components/home/telemetry-section";
 import { ChampionshipChart } from "@/components/home/championship-chart";
-import { CircuitGallery } from "@/components/home/circuit-gallery";
-import { ArchiveStats } from "@/components/home/archive-stats";
-import { PhoneShowcase } from "@/components/home/phone-showcase";
+import { ArchiveSection } from "@/components/home/archive-section";
+import { BrandMark } from "@/components/home/brand-mark";
+import {
+  getAllRaceSeasons,
+  getDriverStandings,
+  getSchedule,
+  getSeasonRacePoints,
+  getSeasonSprintPoints,
+  getTableCount,
+} from "@/lib/api/stats-api";
+import { config } from "@/lib/config";
+import { isUpcoming, raceFromRow } from "@/lib/models/schedule";
+import { fetchCircuitOutline } from "@/lib/home/circuit-outline";
+import {
+  buildChampionshipProgression,
+  buildSeasonRaceCounts,
+  homeDriverStandingFromRow,
+} from "@/lib/home/marketing-data";
 
-export default function HomePage() {
-  const mounted = useMounted();
-  const { data: races } = useQuery({
-    queryKey: ["schedule", config.currentSeason],
-    queryFn: async () => (await getSchedule(config.currentSeason)).map(raceFromRow),
-    staleTime: staleTime.currentSeason,
-  });
+// Visible by default so the section can be reviewed; set this to "true" to
+// hide the developer-access pitch for the consumer launch.
+const apiAccessVisible = process.env.NEXT_PUBLIC_API_ACCESS_HIDDEN !== "true";
+export const revalidate = 900;
 
-  // Gated on `mounted` because RaceCountdown renders a live clock — see
-  // CLAUDE.md gotcha #4 on client-only values and hydration.
-  const next = mounted ? races?.find(isUpcoming) : undefined;
-  // "What's on next" is a session, not a race — on a Friday that's FP1.
-  const upcoming = mounted && races ? nextSession(races) : null;
+export default async function HomePage() {
+  const [
+    scheduleRows,
+    driverRows,
+    racePointRows,
+    sprintPointRows,
+    seasonRows,
+    raceCount,
+    driverCount,
+    circuitCount,
+    resultCount,
+    lapLeaderCount,
+    pitStopCount,
+  ] = await Promise.all([
+    getSchedule(config.currentSeason).catch(() => []),
+    getDriverStandings(config.currentSeason).catch(() => []),
+    getSeasonRacePoints(config.currentSeason).catch(() => []),
+    getSeasonSprintPoints(config.currentSeason).catch(() => []),
+    getAllRaceSeasons().catch(() => []),
+    getTableCount("races").catch(() => null),
+    getTableCount("drivers").catch(() => null),
+    getTableCount("circuits").catch(() => null),
+    getTableCount("race_results").catch(() => null),
+    getTableCount("lap_leaders").catch(() => null),
+    getTableCount("pit_stops").catch(() => null),
+  ]);
+
+  const races = scheduleRows.map(raceFromRow);
+  const nextRace = races.find(isUpcoming) ?? null;
+  const allDrivers = driverRows.map(homeDriverStandingFromRow);
+  const chartDrivers = allDrivers.slice(0, 4);
+  const progression = buildChampionshipProgression(chartDrivers, racePointRows, sprintPointRows);
+  const seasons = buildSeasonRaceCounts(seasonRows);
+
+  const totals = {
+    races: raceCount,
+    drivers: driverCount,
+    circuits: circuitCount,
+    results: resultCount,
+    lapLeaders: lapLeaderCount,
+    pitStops: pitStopCount,
+  };
+
+  // The lap section follows the calendar: the next race's own circuit SVG,
+  // fetched server-side, with baked geometry as the fallback.
+  const outline = await fetchCircuitOutline(nextRace?.circuit.imageUrl);
+  const lapCircuit = {
+    ...outline,
+    name: nextRace?.circuit.circuitName || "The next lap",
+    label: [nextRace?.circuit.locality, nextRace?.circuit.country].filter(Boolean).join(", ").toUpperCase(),
+    eyebrow: nextRace ? `NEXT UP · ROUND ${nextRace.round}` : "THE SEASON",
+  };
 
   return (
-    <main className="min-h-screen overflow-x-clip">
-      <Hero upcoming={upcoming} />
-      {next && <RaceCountdown race={next} />}
-      <TheLap />
-      <TelemetrySection />
-      <ArchiveStats />
-      <ChampionshipChart />
-      <CircuitGallery />
-      <PhoneShowcase />
-      <ClosingCta />
+    <main className="min-h-screen overflow-x-clip bg-black">
+      <Hero season={config.currentSeason} standings={allDrivers} nextRace={nextRace} />
+      <TheLap circuit={lapCircuit} />
+      {chartDrivers.length > 0 && progression.length > 0 && (
+        <ChampionshipChart drivers={chartDrivers} progression={progression} />
+      )}
+      {seasons.length > 0 && <ArchiveSection totals={totals} seasons={seasons} />}
+      <AppExperience />
+      <DashboardPromo />
+      {apiAccessVisible && (
+        <ApiAccessSection enrollmentUrl={process.env.NEXT_PUBLIC_API_ENROLLMENT_URL} totals={totals} />
+      )}
+      <DownloadSection />
       <Footer />
     </main>
   );
 }
 
-function ClosingCta() {
-  const reduced = useReducedMotion();
+function DownloadSection() {
   return (
-    <section className="relative overflow-hidden border-t border-white/10 px-6 py-28">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 60% 70% at 50% 100%, color-mix(in srgb, var(--color-primary) 30%, transparent), transparent 70%)",
-        }}
+    <section id="download" className="relative overflow-hidden border-t border-white/10 px-5 py-24 sm:px-8 sm:py-32">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_75%_at_50%_100%,rgba(181,36,0,0.28),transparent_72%)]" />
+      <Image
+        src="/brand/logo-transparent.png"
+        alt=""
+        width={1536}
+        height={1024}
+        className="pointer-events-none absolute left-1/2 top-1/2 w-[56rem] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-[0.09] mix-blend-screen"
       />
-      <motion.div
-        initial={reduced ? false : { opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-80px" }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative mx-auto max-w-2xl text-center"
-      >
-        <h2 className="font-[var(--font-f1)] text-4xl font-bold italic tracking-tight sm:text-6xl">
-          Lights out.
+      <div className="relative mx-auto max-w-3xl text-center">
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#df3409]">The grid is forming</p>
+        <h2 className="mt-5 font-[var(--font-f1)] text-[clamp(2.7rem,7vw,5.8rem)] font-bold italic leading-[0.9] tracking-[-0.055em]">
+          YOUR RACE WEEKEND.<br />IN YOUR POCKET.
         </h2>
-        <p className="mx-auto mt-4 max-w-md text-(--color-text-secondary)">
-          Open the dashboard and follow the session the way the pit wall does.
+        <p className="mx-auto mt-6 max-w-xl text-sm leading-7 text-white/52 sm:text-base">
+          GridBeat is preparing for launch on iOS and Android. Store links and release updates will appear here when
+          the builds are ready.
         </p>
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/live"
-            className="rounded-full bg-(--color-primary) px-8 py-3.5 text-sm font-bold tracking-wide text-white transition-transform duration-200 hover:scale-[1.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary)"
-          >
-            Watch Live
-          </Link>
-          <Link
-            href="/standings"
-            className="rounded-full border border-white/15 px-8 py-3.5 text-sm font-bold tracking-wide transition-colors hover:border-white/40 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40"
-          >
-            See the Standings
-          </Link>
+        <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <span className="inline-flex min-h-12 min-w-52 items-center justify-center rounded-full border border-white/12 bg-white/[0.035] px-6 text-xs font-bold text-white/58">
+            Apple App Store · soon
+          </span>
+          <span className="inline-flex min-h-12 min-w-52 items-center justify-center rounded-full border border-white/12 bg-white/[0.035] px-6 text-xs font-bold text-white/58">
+            Google Play · soon
+          </span>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }
 
 const FOOTER_LINKS = [
-  { href: "/live", label: "Live Timing" },
+  { href: "#mobile", label: "Mobile app" },
+  { href: "#features", label: "Features" },
+  { href: "/live", label: "Live dashboard" },
   { href: "/schedule", label: "Schedule" },
   { href: "/standings", label: "Standings" },
-  { href: "/results", label: "Race Archives" },
-  { href: "/stats", label: "Stats" },
-  { href: "/circuits", label: "Circuit Guide" },
-  { href: "/hall-of-fame", label: "Hall of Fame" },
-  { href: "/news", label: "News" },
+  { href: "/stewards-room", label: "Stewards’ Room" },
 ] as const;
 
 function Footer() {
   return (
-    <footer className="border-t border-white/10 px-6 py-12">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="font-[var(--font-f1)] text-lg font-bold italic tracking-tight">GRIDBEAT</div>
-          <p className="mt-1 text-xs text-(--color-text-muted)">Formula 1, live and explained.</p>
-        </div>
-        <nav className="grid grid-cols-2 gap-x-10 gap-y-2 sm:grid-cols-4">
-          {FOOTER_LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="text-xs text-(--color-text-secondary) transition-colors hover:text-white"
-            >
-              {l.label}
+    <footer className="border-t border-white/10 px-5 py-10 sm:px-8">
+      <div className="mx-auto flex max-w-[84rem] flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+        <Link href="/" className="inline-flex flex-col gap-2" aria-label="GridBeat home">
+          <BrandMark height={30} wordmarkClass="text-base" />
+          <span className="text-[10px] text-white/35">Formula 1, live and explained.</span>
+        </Link>
+        <nav className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3" aria-label="Footer">
+          {FOOTER_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="text-[11px] text-white/45 transition-colors hover:text-white">
+              {link.label}
             </Link>
           ))}
         </nav>
       </div>
-      <p className="mx-auto mt-10 max-w-6xl text-[11px] text-(--color-text-muted)">
-        Unofficial. Not affiliated with Formula 1, the FIA, or any team. Timing data via the F1 live feed; circuit
-        geometry via MultiViewer.
-      </p>
+      <div className="mx-auto mt-10 flex max-w-[84rem] flex-col gap-2 border-t border-white/[0.07] pt-6 text-[9px] leading-relaxed text-white/28 sm:flex-row sm:justify-between">
+        <p>Unofficial. Not affiliated with Formula 1, the FIA, or any team.</p>
+        <p>© {new Date().getFullYear()} GridBeat</p>
+      </div>
     </footer>
   );
 }

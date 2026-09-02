@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useSectionStore } from "@/lib/nav/section-store";
@@ -27,6 +28,17 @@ const NAV_ITEMS = [
 ] as const;
 
 const COLLAPSE_KEY = "gridbeat-sidebar-collapsed";
+
+function Brand({ compact = false }: { compact?: boolean }) {
+  return (
+    <span className="flex items-center gap-2.5">
+      <span className={`relative overflow-hidden rounded-lg border border-white/10 ${compact ? "h-8 w-8" : "h-9 w-12"}`}>
+        <Image src="/brand/logo-transparent.png" alt="" fill sizes={compact ? "32px" : "48px"} className="scale-[1.32] object-cover" />
+      </span>
+      {!compact && <span className="font-[var(--font-f1)] text-lg font-bold italic tracking-[-0.04em]">GRIDBEAT</span>}
+    </span>
+  );
+}
 
 const noopSubscribe = () => () => {};
 const collapsedServerSnapshot = () => false;
@@ -129,9 +141,7 @@ export function Sidebar() {
     <>
       {/* Mobile top bar */}
       <div className="flex items-center justify-between border-b border-(--color-border) bg-(--color-surface) px-4 py-3 lg:hidden">
-        <Link href="/" className="font-[var(--font-f1)] text-lg font-bold tracking-tight">
-          GRIDBEAT
-        </Link>
+        <Link href="/" aria-label="GridBeat home"><Brand /></Link>
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"
@@ -147,7 +157,7 @@ export function Sidebar() {
           <div className="fixed inset-0 z-40 bg-black/60" onClick={() => setOpen(false)} />
           <aside className="fixed inset-y-0 left-0 z-50 flex w-64 max-w-[80vw] flex-col border-r border-(--color-border) bg-(--color-surface) px-4 py-6">
             <div className="mb-8 flex items-center justify-between px-2">
-              <span className="font-[var(--font-f1)] text-xl font-bold tracking-tight">GRIDBEAT</span>
+              <Link href="/" aria-label="GridBeat home" onClick={() => setOpen(false)}><Brand /></Link>
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
@@ -170,13 +180,9 @@ export function Sidebar() {
       >
         <div className={`mb-8 flex items-center ${collapsed ? "flex-col gap-3" : "justify-between px-2"}`}>
           {collapsed ? (
-            <Link href="/" className="font-[var(--font-f1)] text-lg font-bold tracking-tight" title="GridBeat">
-              G
-            </Link>
+            <Link href="/" title="GridBeat" aria-label="GridBeat home"><Brand compact /></Link>
           ) : (
-            <Link href="/" className="font-[var(--font-f1)] text-xl font-bold tracking-tight">
-              GRIDBEAT
-            </Link>
+            <Link href="/" aria-label="GridBeat home"><Brand /></Link>
           )}
           <button
             onClick={toggleCollapsed}

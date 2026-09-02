@@ -5,11 +5,25 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { SplashScreen } from "@/components/layout/splash-screen";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashboard.gridbeat.app"),
   title: {
     default: "GridBeat",
     template: "%s | GridBeat",
   },
-  description: "Live F1 timing, standings, results, and stats — GridBeat web dashboard.",
+  description:
+    "GridBeat is the Formula 1 companion for iOS and Android — live timing, telemetry, team radio, race control, standings, results, and a full web dashboard.",
+  openGraph: {
+    title: "GridBeat — Feel every millisecond",
+    description: "Live timing, telemetry, team radio, race control and the full Formula 1 season — in your pocket.",
+    type: "website",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "GridBeat — Feel every millisecond" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GridBeat — Feel every millisecond",
+    description: "Live timing, telemetry, team radio, race control and the full Formula 1 season — in your pocket.",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

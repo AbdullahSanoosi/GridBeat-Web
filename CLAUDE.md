@@ -31,6 +31,30 @@ of hunting for that path.
 
 ## Status (update this section as work lands)
 
+**Update 2026-09-02 — homepage rebuilt as a mobile-app marketing site:**
+the previous telemetry-first landing page was replaced after the user said
+the product story and some of its content were wrong. `/` now sells the iOS
+and Android app first, keeps the web dashboard as a clear secondary entry,
+and uses the Flutter app's actual `assets/images/logo_transparent.png`
+(`public/brand/logo-transparent.png`) in the homepage and dashboard shell.
+Its black/red palette, tonal container ramp, 16/28px corner language,
+Formula1 typography, and floating pill-nav phone mockups are deliberately
+derived from the Flutter `AppColors`/`Md3Color`/`Md3Shape`/
+`ScaffoldWithNav` source rather than a generic SaaS theme.
+
+The homepage no longer opens the live-timing WebSocket or shows modelled /
+illustrative championship data. It is a server-rendered 15-minute ISR page
+backed by the real stats API: `driver_standings` feeds the hero and standings
+screen, `race_results` + `sprint_results` are folded into a real cumulative
+top-four drivers chart, and `constructor_standings` feeds the second graph.
+The next-round section follows the live `races` calendar and renders that
+circuit's own API `image_url` through the existing SVG recolour proxy, so the
+track automatically moves from Monza to Madring, Baku, etc. instead of being
+hard-coded to Suzuka. API/WSS developer enrollment is implemented as a paid,
+post-v1 marketing section behind `NEXT_PUBLIC_API_ENROLLMENT_ENABLED`; it is
+off by default, with an optional `NEXT_PUBLIC_API_ENROLLMENT_URL` for the
+eventual enrollment flow. `tsc`, lint, and the production build are clean.
+
 **Done — first-load splash screen:** `src/components/layout/splash-screen.tsx`
 + the `.splash-*` keyframes in `globals.css` — an F1 starting-light-gantry
 sequence into the GRIDBEAT wordmark, then a fade. No Flutter equivalent to
@@ -1091,6 +1115,28 @@ directory for most of the session was the Flutter repo, not this one.
    {(state) => { window.__debug = state }}>`, walk `state.scene.traverse()`
    to inspect real geometry/materials/positions, then remove the hook
    before finishing — don't leave it shipped.
+
+---
+
+## Marketing homepage data treatment (2026-09)
+
+- The homepage is an app-first marketing surface and dashboard entry point.
+  Its next-race and championship content is server-fetched from the GridBeat
+  stats API with a 15-minute revalidation window; do not replace this data
+  with hard-coded demo values.
+- Championship history is computed from actual `race_results` plus
+  `sprint_results`; current positions and totals come from driver standings.
+  `ChampionshipChart` deliberately keeps the visual design from the original
+  handoff, but its former illustrative constants have been replaced by those
+  live API values.
+- The original `CircuitGallery` is also back on the marketing page. When the
+  upcoming circuit is in its curated set, that real next venue is selected by
+  default; the facts and artwork remain sourced from the Flutter app assets.
+- The original scroll-driven `TheLap` Suzuka section is restored unchanged as
+  the feature/navigation spine between the marketing hero and data sections.
+- The API enrollment section is production-ready but remains controlled by
+  `NEXT_PUBLIC_API_ENROLLMENT_ENABLED`; it must stay hidden for the first
+  release unless that feature flag is explicitly enabled.
 
 ---
 

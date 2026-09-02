@@ -11,19 +11,31 @@ import {
   useSpring,
   useTransform,
 } from "motion/react";
-import { HOME_CIRCUITS } from "@/lib/home/circuits";
+
+export interface LapCircuit {
+  d: string;
+  viewBox: string;
+  /** Circuit name, e.g. "Autodromo Nazionale di Monza". */
+  name: string;
+  /** Location line, e.g. "MONZA, ITALY". */
+  label: string;
+  /** Round context, e.g. "NEXT UP · ROUND 13". */
+  eyebrow: string;
+}
 
 /**
- * The page's spine: one lap of Suzuka, driven by scroll.
+ * The page's spine: one lap of whichever circuit is up next, driven by scroll.
  *
  * The racing line draws itself as you scroll, a car marker runs the real
  * circuit geometry (sampled off the live SVG path via getPointAtLength),
  * and the feature groups arrive as marshal posts at their sector. Sectors
  * are the ordering device because F1 laps genuinely have three of them —
  * this is the content's own structure, not decorative numbering bolted on.
+ *
+ * The outline is fetched server-side from the circuit's own SVG (see
+ * lib/home/circuit-outline.ts) so this follows the calendar rather than
+ * being pinned to one track.
  */
-
-const CIRCUIT = HOME_CIRCUITS.find((c) => c.name === "SUZUKA") ?? HOME_CIRCUITS[0];
 
 const SECTORS = [
   {
@@ -64,7 +76,7 @@ const SECTORS = [
   },
 ] as const;
 
-export function TheLap() {
+export function TheLap({ circuit }: { circuit: LapCircuit }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLength, setPathLength] = useState(0);
@@ -81,6 +93,11 @@ export function TheLap() {
 
   const carX = useMotionValue(0);
   const carY = useMotionValue(0);
+
+  // Source SVGs don't share a coordinate space (the baked fallback is
+  // 0 0 1000 1000, the live circuit files are ~524 wide), so every stroke
+  // weight and marker radius below is expressed in units of that box.
+  const u = (Number(circuit.viewBox.split(/\s+/)[2]) || 1000) / 1000;
 
   useEffect(() => {
     if (pathRef.current) setPathLength(pathRef.current.getTotalLength());
@@ -115,21 +132,21 @@ export function TheLap() {
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
           {/* Circuit */}
           <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-            <svg viewBox="0 0 1000 1000" className="w-full overflow-visible">
+            <svg viewBox={circuit.viewBox} className="w-full overflow-visible">
               {/* Ghost outline — the full lap, always visible */}
               <path
-                d={CIRCUIT.d}
+                d={circuit.d}
                 fill="none"
                 stroke="rgb(255 255 255 / 0.07)"
-                strokeWidth={26}
+                strokeWidth={26 * u}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
               <path
-                d={CIRCUIT.d}
+                d={circuit.d}
                 fill="none"
                 stroke="rgb(255 255 255 / 0.12)"
-                strokeWidth={2}
+                strokeWidth={2 * u}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -139,10 +156,10 @@ export function TheLap() {
                   `style` can't do reliably next to a MotionValue. */}
               <motion.path
                 ref={pathRef}
-                d={CIRCUIT.d}
+                d={circuit.d}
                 fill="none"
                 stroke="var(--color-primary)"
-                strokeWidth={7}
+                strokeWidth={7 * u}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 style={{
@@ -153,16 +170,19 @@ export function TheLap() {
               {/* Car */}
               {!reduced && pathLength > 0 && (
                 <motion.g style={{ x: carX, y: carY }}>
-                  <circle r={26} fill="var(--color-primary)" opacity={0.22} />
-                  <circle r={13} fill="var(--color-primary)" />
-                  <circle r={5} fill="#fff" />
+                  <circle r={26 * u} fill="var(--color-primary)" opacity={0.22} />
+                  <circle r={13 * u} fill="var(--color-primary)" />
+                  <circle r={5 * u} fill="#fff" />
                 </motion.g>
               )}
             </svg>
 
             <div className="mt-6 text-center lg:text-left">
-              <div className="font-[var(--font-f1)] text-xl font-bold tracking-tight">{CIRCUIT.name}</div>
-              <div className="text-xs tracking-[0.2em] text-(--color-text-muted)">{CIRCUIT.label}</div>
+              <div className="text-[9px] font-bold tracking-[0.24em] text-(--color-primary) uppercase">
+                {circuit.eyebrow}
+              </div>
+              <div className="mt-1.5 font-[var(--font-f1)] text-xl font-bold tracking-tight">{circuit.name}</div>
+              <div className="text-xs tracking-[0.2em] text-(--color-text-muted)">{circuit.label}</div>
             </div>
           </div>
 

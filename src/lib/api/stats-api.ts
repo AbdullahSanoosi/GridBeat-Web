@@ -183,6 +183,16 @@ export function getAllCircuits(): Promise<Row[]> {
   });
 }
 
+/**
+ * Every race's season, oldest first — the homepage's archive chart counts
+ * these client-side into races-per-season. One column over ~1,200 rows is
+ * cheaper than asking PostgREST for a grouped aggregate, and it keeps the
+ * shaping in TypeScript where it can be read.
+ */
+export function getAllRaceSeasons(): Promise<Row[]> {
+  return get("/races", { select: "season", order: "season.asc", limit: 5000 });
+}
+
 /** One driver's display name, for `generateMetadata` — cheaper than `getAllDrivers()` for a single lookup. */
 export async function getDriverName(driverId: string): Promise<string | null> {
   const rows = await get("/drivers", { driver_id: `eq.${driverId}`, select: "given_name,family_name", limit: 1 });
@@ -233,7 +243,7 @@ export async function getSchedule(season: number): Promise<Row[]> {
       "fp1_date,fp1_time,fp2_date,fp2_time,fp3_date,fp3_time," +
       "qualifying_date,qualifying_time," +
       "sprint_qualifying_date,sprint_qualifying_time,sprint_date,sprint_time," +
-      "circuits(locality,country)",
+      "circuits(name,locality,country,image_url)",
     order: "round.asc",
   });
   return rows.map((r) => {
@@ -242,6 +252,8 @@ export async function getSchedule(season: number): Promise<Row[]> {
     delete flat.circuits;
     flat.locality = circuit.locality ?? null;
     flat.country = circuit.country ?? null;
+    flat.circuit_name = circuit.name ?? null;
+    flat.circuit_image_url = circuit.image_url ?? null;
     return flat;
   });
 }
@@ -280,6 +292,28 @@ export function getConstructorStandings(season: number): Promise<Row[]> {
     season: `eq.${season}`,
     select: "position,points,wins,constructors(constructor_id,name,nationality)",
     order: "position.asc",
+  });
+}
+
+/**
+ * Per-round championship points used by the marketing homepage's real
+ * progression chart. Race and sprint rows stay separate here because they
+ * are separate PostgREST tables; the homepage folds them into the same round
+ * before cumulating.
+ */
+export function getSeasonRacePoints(season: number): Promise<Row[]> {
+  return get("/race_results", {
+    season: `eq.${season}`,
+    select: "round,driver_id,constructor_id,points",
+    order: "round.asc,driver_id.asc",
+  });
+}
+
+export function getSeasonSprintPoints(season: number): Promise<Row[]> {
+  return get("/sprint_results", {
+    season: `eq.${season}`,
+    select: "round,driver_id,constructor_id,points",
+    order: "round.asc,driver_id.asc",
   });
 }
 

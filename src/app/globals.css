@@ -95,6 +95,14 @@ body {
   font-family: var(--font-f1), ui-sans-serif, system-ui, sans-serif;
 }
 
+.marketing-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+}
+
 /*
  * Event-banner entrance (fastest-lap-overlay.tsx, leader-change-overlay.tsx)
  * — fade + slide-in-from-left, mirrors the Flutter originals' .fadeIn() +

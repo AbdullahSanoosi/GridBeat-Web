@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { ChampionshipPoint, HomeDriverStanding } from "@/lib/home/marketing-data";
 
 /**
  * Cumulative championship points by round — the same shape as the app's
@@ -26,38 +27,25 @@ import {
  * band, and the labels are what make that safe.
  */
 
-const DRIVERS = [
-  { code: "NOR", name: "Norris", team: "McLaren", color: "#FF8000", logo: "mclaren" },
-  { code: "VER", name: "Verstappen", team: "Red Bull", color: "#3671C6", logo: "red_bull" },
-  { code: "LEC", name: "Leclerc", team: "Ferrari", color: "#E80020", logo: "ferrari" },
-  { code: "RUS", name: "Russell", team: "Mercedes", color: "#27F4D2", logo: "mercedes" },
-] as const;
+function teamLogo(team: string) {
+  const normalized = team.toLowerCase();
+  if (normalized.includes("red bull") && !normalized.includes("racing")) return "red_bull";
+  if (normalized.includes("racing bulls") || normalized === "rb") return "racing_bulls";
+  if (normalized.includes("aston martin")) return "aston_martin";
+  return normalized.replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
 
-/** Points per round, in calendar order — cumulated below. */
-const PER_ROUND: Record<string, number[]> = {
-  NOR: [25, 18, 25, 12, 25, 18, 15, 25, 10, 25, 18, 25],
-  VER: [18, 25, 12, 25, 18, 25, 25, 12, 25, 18, 25, 15],
-  LEC: [15, 12, 18, 18, 10, 15, 12, 18, 18, 12, 15, 18],
-  RUS: [12, 15, 15, 15, 15, 12, 18, 15, 12, 15, 12, 12],
-};
-
-const ROUNDS = PER_ROUND.NOR.length;
-
-const DATA = Array.from({ length: ROUNDS }, (_, i) => {
-  const row: Record<string, number> = { round: i + 1 };
-  for (const d of DRIVERS) {
-    row[d.code] = PER_ROUND[d.code].slice(0, i + 1).reduce((a, b) => a + b, 0);
-  }
-  return row;
-});
-
-const FINAL = DATA[DATA.length - 1];
-const STANDINGS = [...DRIVERS].sort((a, b) => (FINAL[b.code] as number) - (FINAL[a.code] as number));
-
-export function ChampionshipChart() {
+export function ChampionshipChart({
+  drivers,
+  progression,
+}: {
+  drivers: HomeDriverStanding[];
+  progression: ChampionshipPoint[];
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
   const [focus, setFocus] = useState<string | null>(null);
+  const throughRound = progression.at(-1)?.round ?? 0;
 
   return (
     <section ref={ref} className="relative overflow-hidden border-t border-white/10 px-6 py-24">
@@ -76,24 +64,24 @@ export function ChampionshipChart() {
 
           {/* Legend — always present for 2+ series, and doubles as a filter */}
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
-            {STANDINGS.map((d, i) => (
-              <li key={d.code}>
+            {drivers.map((d) => (
+              <li key={d.driverId}>
                 <button
-                  onMouseEnter={() => setFocus(d.code)}
+                  onMouseEnter={() => setFocus(d.driverId)}
                   onMouseLeave={() => setFocus(null)}
-                  onFocus={() => setFocus(d.code)}
+                  onFocus={() => setFocus(d.driverId)}
                   onBlur={() => setFocus(null)}
                   className="flex items-center gap-2 rounded-md px-1 py-0.5 text-left transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40"
-                  style={{ opacity: focus && focus !== d.code ? 0.4 : 1 }}
+                  style={{ opacity: focus && focus !== d.driverId ? 0.4 : 1 }}
                 >
-                  <Image src={`/teams/${d.logo}.png`} alt="" width={20} height={20} className="h-5 w-5 object-contain" />
+                  <Image src={`/teams/${teamLogo(d.team)}.png`} alt="" width={20} height={20} className="h-5 w-5 object-contain" />
                   <span className="flex flex-col leading-tight">
                     <span className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
                       <span className="font-[var(--font-f1)] text-xs font-bold text-white">{d.code}</span>
                     </span>
                     <span className="font-[var(--font-f1)] text-[10px] tabular-nums text-(--color-text-muted)">
-                      P{i + 1} · {FINAL[d.code]} pts
+                      P{d.position} · {d.points} pts
                     </span>
                   </span>
                 </button>
@@ -105,7 +93,7 @@ export function ChampionshipChart() {
         <figure className="mt-10 rounded-2xl border border-white/10 bg-(--color-surface)/60 p-4 pt-6 sm:p-6">
           <div className="h-[300px] w-full sm:h-[380px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={DATA} margin={{ top: 6, right: 46, bottom: 4, left: -18 }}>
+              <LineChart data={progression} margin={{ top: 6, right: 46, bottom: 4, left: -18 }}>
                 <CartesianGrid stroke="rgb(255 255 255 / 0.055)" vertical={false} />
                 <XAxis
                   dataKey="round"
@@ -137,16 +125,16 @@ export function ChampionshipChart() {
                   }}
                   labelStyle={{ color: "rgb(255 255 255 / 0.6)", fontSize: 11 }}
                   labelFormatter={(v) => `Round ${v}`}
-                  formatter={(value, name) => [`${value} pts`, name]}
+                  formatter={(value, name) => [`${value} pts`, drivers.find((driver) => driver.driverId === name)?.code ?? name]}
                 />
-                {DRIVERS.map((d) => (
+                {drivers.map((d) => (
                   <Line
-                    key={d.code}
+                    key={d.driverId}
                     type="monotone"
-                    dataKey={d.code}
+                    dataKey={d.driverId}
                     stroke={d.color}
-                    strokeWidth={focus === d.code ? 3 : 2}
-                    strokeOpacity={focus && focus !== d.code ? 0.22 : 1}
+                    strokeWidth={focus === d.driverId ? 3 : 2}
+                    strokeOpacity={focus && focus !== d.driverId ? 0.22 : 1}
                     dot={false}
                     activeDot={{ r: 4, strokeWidth: 2, stroke: "#0D0D0D" }}
                     isAnimationActive={inView}
@@ -158,8 +146,7 @@ export function ChampionshipChart() {
           </div>
 
           <figcaption className="mt-3 text-[11px] text-(--color-text-muted)">
-            Cumulative points across {ROUNDS} rounds. Illustrative season data — the live chart in the app is built from
-            the real classification.
+            Cumulative race and sprint points through round {throughRound}. Source: GridBeat F1 Stats API.
           </figcaption>
         </figure>
 

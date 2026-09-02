@@ -89,6 +89,7 @@ export interface F1Circuit {
   circuitName: string;
   locality: string;
   country: string;
+  imageUrl: string | null;
 }
 
 export interface F1Race {
@@ -115,9 +116,10 @@ export function raceFromRow(r: Row): F1Race {
     raceName: (r.race_name as string) ?? "",
     circuit: {
       circuitId: (r.circuit_id as string) ?? "",
-      circuitName: (r.circuit_id as string) ?? "",
+      circuitName: (r.circuit_name as string) ?? (r.circuit_id as string) ?? "",
       locality: (r.locality as string) ?? "",
       country: (r.country as string) ?? "",
+      imageUrl: (r.circuit_image_url as string | null) ?? null,
     },
     date: (r.race_date as string) ?? "",
     time: (r.race_time as string | null) ?? null,
