@@ -1,8 +1,8 @@
 /**
  * Ported from GridBeat (Flutter) lib/features/news/providers/news_provider.dart.
  * ESPN's site API sends open CORS headers, so this is called directly from
- * the browser (unlike twitterapi.io, which needs a key and goes through the
- * /api/x-posts proxy route instead).
+ * the browser. The strategy-briefing RSS beside it on the News page does
+ * not, and goes through /api/strategy-briefings instead.
  */
 
 export interface NewsArticle {
