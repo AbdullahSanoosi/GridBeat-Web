@@ -376,10 +376,15 @@ body {
 
 .splash-tagline {
   font-family: var(--font-f1);
-  font-size: clamp(0.55rem, 2.4vw, 0.7rem);
+  font-size: clamp(0.5rem, 2vw, 0.7rem);
   font-weight: 700;
-  letter-spacing: clamp(0.16em, 1vw, 0.45em);
-  margin-right: calc(-1 * clamp(0.16em, 1vw, 0.45em));
+  /* Tracking is deliberately tighter than the wordmark's: this line is 29
+     characters, not 8, so the wide tracking that suits GRIDBEAT overflows a
+     375px viewport here. Measured, not guessed. */
+  letter-spacing: clamp(0.08em, 0.5vw, 0.26em);
+  margin-right: calc(-1 * clamp(0.08em, 0.5vw, 0.26em));
+  max-width: 92vw;
+  text-align: center;
   color: var(--color-text-muted);
   opacity: 0;
   transform: translateY(6px);

@@ -51,7 +51,7 @@ export function SplashScreen() {
             next/image's srcset machinery here. */}
         <img src="/brand/logo-mark.webp" alt="" className="splash-mark" width={340} height={227} />
         <div className="splash-wordmark font-[var(--font-f1)]">GRIDBEAT</div>
-        <div className="splash-tagline">LIVE TIMING</div>
+        <div className="splash-tagline">FORMULA 1, LIVE AND EXPLAINED</div>
       </div>
     </div>
   );

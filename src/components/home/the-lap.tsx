@@ -288,7 +288,16 @@ function SectorTrace({
   const start = index * span;
   // Visible length within this segment only: 0 before the car arrives, its
   // full third once the car has left it.
-  const drawn = useTransform(progress, (p) => Math.min(Math.max(p - start, 0), span));
+  const drawn = useTransform(progress, (p) =>
+    reduced ? span : Math.min(Math.max(p - start, 0), span),
+  );
+  // Where this segment starts along the lap. This *must* be a MotionValue:
+  // Motion only converts pathOffset into stroke-dashoffset inside
+  // `addSVGPathValue` (motion-dom's SVG effect), which is MotionValue-only —
+  // a plain number in `style` is dropped without warning, which left all
+  // three sectors drawing from the start line stacked on top of each other.
+  // Same trap as the hand-rolled strokeDasharray one, one layer down.
+  const offset = useMotionValue(start);
 
   return (
     <motion.path
@@ -300,8 +309,8 @@ function SectorTrace({
       strokeLinecap="round"
       strokeLinejoin="round"
       style={{
-        pathLength: reduced ? span : drawn,
-        pathOffset: start,
+        pathLength: drawn,
+        pathOffset: offset,
         filter: `drop-shadow(0 0 14px color-mix(in srgb, ${color} 70%, transparent))`,
       }}
     />
