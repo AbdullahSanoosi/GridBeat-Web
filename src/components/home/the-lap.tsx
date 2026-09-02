@@ -80,6 +80,11 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLength, setPathLength] = useState(0);
+  // Source circuit SVGs are square, but most tracks only fill part of that
+  // box (Monza sits in the top ~60%), which left a large dead gap under the
+  // outline and pushed the caption down. Measuring the path's own bounds and
+  // reframing to them makes every circuit fill its frame the same way.
+  const [fittedBox, setFittedBox] = useState<string | null>(null);
   const reduced = useReducedMotion();
 
   const { scrollYProgress } = useScroll({
@@ -96,12 +101,26 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
 
   // Source SVGs don't share a coordinate space (the baked fallback is
   // 0 0 1000 1000, the live circuit files are ~524 wide), so every stroke
-  // weight and marker radius below is expressed in units of that box.
-  const u = (Number(circuit.viewBox.split(/\s+/)[2]) || 1000) / 1000;
+  // weight and marker radius below is expressed in units of the box actually
+  // being rendered — the fitted one once it's measured, or the source box
+  // until then.
+  const activeBox = fittedBox ?? circuit.viewBox;
+  const u = (Number(activeBox.split(/\s+/)[2]) || 1000) / 1000;
 
   useEffect(() => {
-    if (pathRef.current) setPathLength(pathRef.current.getTotalLength());
-  }, []);
+    const path = pathRef.current;
+    if (!path) return;
+    setPathLength(path.getTotalLength());
+    try {
+      const b = path.getBBox();
+      if (b.width > 0 && b.height > 0) {
+        const pad = Math.max(b.width, b.height) * 0.08;
+        setFittedBox(`${b.x - pad} ${b.y - pad} ${b.width + pad * 2} ${b.height + pad * 2}`);
+      }
+    } catch {
+      // getBBox throws on a detached/hidden node — keep the source viewBox.
+    }
+  }, [circuit.d]);
 
   useMotionValueEvent(progress, "change", (p) => {
     const path = pathRef.current;
@@ -121,18 +140,27 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
   }, [pathLength, carX, carY]);
 
   return (
-    <section ref={containerRef} className="relative" style={{ height: reduced ? "auto" : "340vh" }}>
+    <section
+      ref={containerRef}
+      className={reduced ? "relative" : "relative h-auto lg:h-[340vh]"}
+    >
       <div
         className={
           reduced
-            ? "px-6 py-20"
-            : "sticky top-0 flex min-h-screen items-center overflow-hidden px-6 py-20"
+            ? "px-5 py-16 sm:px-6"
+            : // Below lg this just flows: a phone can't show a circuit and
+              // three cards at once, and pinning it there only produces a
+              // long stretch of empty scrolling. From lg it pins to exactly
+              // one viewport, with the padding scaling by viewport height so
+              // all three sectors fit a short laptop screen as well as a tall
+              // monitor.
+              "flex items-center overflow-hidden px-5 py-16 sm:px-6 lg:sticky lg:top-0 lg:h-screen lg:py-[clamp(1.5rem,4vh,4rem)]"
         }
       >
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
           {/* Circuit */}
           <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-            <svg viewBox={circuit.viewBox} className="w-full overflow-visible">
+            <svg viewBox={activeBox} className="w-full overflow-visible">
               {/* Ghost outline — the full lap, always visible */}
               <path
                 d={circuit.d}
@@ -187,7 +215,7 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
           </div>
 
           {/* Sector cards */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 lg:gap-[clamp(0.6rem,1.6vh,1.25rem)]">
             {SECTORS.map((s, i) => (
               <SectorCard key={s.n} sector={s} index={i} progress={progress} reduced={!!reduced} />
             ))}
@@ -221,23 +249,27 @@ function SectorCard({
   return (
     <motion.div
       style={reduced ? undefined : { opacity, x, borderColor }}
-      className="rounded-2xl border border-white/10 bg-(--color-surface)/70 p-5 backdrop-blur-sm sm:p-6"
+      className="rounded-2xl border border-white/10 bg-(--color-surface)/70 p-4 backdrop-blur-sm sm:p-5 lg:p-[clamp(0.85rem,1.8vh,1.5rem)]"
     >
-      <div className="mb-3 flex items-baseline gap-3">
+      <div className="mb-2.5 flex items-baseline gap-3 lg:mb-[clamp(0.4rem,1vh,0.75rem)]">
         <span className="font-[var(--font-f1)] text-[10px] font-bold tracking-[0.22em]" style={{ color: sector.color }}>
           SECTOR {sector.n}
         </span>
         <span className="h-px flex-1" style={{ backgroundColor: sector.color, opacity: 0.35 }} />
       </div>
-      <h3 className="font-[var(--font-f1)] text-xl font-bold sm:text-2xl">{sector.title}</h3>
-      <p className="mt-1 text-sm text-(--color-text-secondary)">{sector.blurb}</p>
+      <h3 className="font-[var(--font-f1)] text-lg font-bold sm:text-xl lg:text-[clamp(1.05rem,2.4vh,1.5rem)] lg:leading-tight">
+        {sector.title}
+      </h3>
+      <p className="mt-1 text-[13px] text-(--color-text-secondary) lg:text-[clamp(0.75rem,1.5vh,0.875rem)]">
+        {sector.blurb}
+      </p>
 
-      <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-0.5 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-0.5 sm:grid-cols-2 lg:mt-[clamp(0.5rem,1.4vh,1rem)]">
         {sector.items.map((item) => (
           <Link
             key={item.label}
             href={item.href}
-            className="group flex items-start gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.05]"
+            className="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/[0.05] lg:py-[clamp(0.25rem,0.8vh,0.5rem)]"
           >
             <span
               className="mt-[7px] h-1 w-1 shrink-0 rounded-full transition-transform duration-200 group-hover:scale-[2.4]"
