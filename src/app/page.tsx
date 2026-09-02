@@ -8,6 +8,7 @@ import { TheLap } from "@/components/home/the-lap";
 import { ChampionshipChart } from "@/components/home/championship-chart";
 import { ArchiveSection } from "@/components/home/archive-section";
 import { WhatsNext } from "@/components/home/whats-next";
+import { ScreenGallery } from "@/components/home/screen-gallery";
 import { BrandMark } from "@/components/home/brand-mark";
 import {
   getAllRaceSeasons,
@@ -93,6 +94,7 @@ export default async function HomePage() {
       )}
       {seasons.length > 0 && <ArchiveSection totals={totals} seasons={seasons} />}
       <AppExperience />
+      <ScreenGallery />
       <WhatsNext />
       <DashboardPromo />
       {apiAccessVisible && (

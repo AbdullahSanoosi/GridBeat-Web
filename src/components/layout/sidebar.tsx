@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useSectionStore } from "@/lib/nav/section-store";
+import { AppPromo } from "@/components/layout/app-promo";
 
 /**
  * The dashboard shell's nav — a persistent left sidebar on desktop
@@ -187,6 +188,9 @@ export function Sidebar() {
               </button>
             </div>
             <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
+            <div className="mt-auto">
+              <AppPromo />
+            </div>
           </aside>
         </div>
       )}
@@ -214,6 +218,11 @@ export function Sidebar() {
           </button>
         </div>
         <NavLinks pathname={pathname} collapsed={collapsed} />
+        {!collapsed && (
+          <div className="mt-auto">
+            <AppPromo />
+          </div>
+        )}
       </aside>
     </>
   );

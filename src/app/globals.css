@@ -221,7 +221,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2.5rem;
+  gap: clamp(1.5rem, 5vw, 2.5rem);
+  padding: 1.5rem;
   overflow: hidden;
   background: var(--color-background);
   animation: splash-fade-out 0.5s ease-in forwards;
@@ -289,11 +290,11 @@ body {
 }
 .splash-speedline-0 {
   --angle: -16deg;
-  margin-top: -110px;
+  margin-top: clamp(-110px, -22vw, -40px);
 }
 .splash-speedline-1 {
   --angle: -9deg;
-  margin-top: -55px;
+  margin-top: clamp(-55px, -11vw, -20px);
   animation-delay: 1.55s;
 }
 .splash-speedline-2 {
@@ -302,18 +303,18 @@ body {
 }
 .splash-speedline-3 {
   --angle: 9deg;
-  margin-top: 55px;
+  margin-top: clamp(20px, 11vw, 55px);
   animation-delay: 1.55s;
 }
 .splash-speedline-4 {
   --angle: 16deg;
-  margin-top: 110px;
+  margin-top: clamp(40px, 22vw, 110px);
   animation-delay: 1.58s;
 }
 
 .splash-rig {
   display: flex;
-  gap: 1.5rem;
+  gap: clamp(0.4rem, 2.2vw, 1.5rem);
   animation: splash-rig-out 0.01s step-end forwards;
   animation-delay: 1.5s;
 }
@@ -322,17 +323,17 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.7rem 0.55rem;
-  border-radius: 0.75rem;
+  gap: clamp(0.3rem, 1.4vw, 0.6rem);
+  padding: clamp(0.35rem, 1.6vw, 0.7rem) clamp(0.3rem, 1.2vw, 0.55rem);
+  border-radius: clamp(0.45rem, 1.8vw, 0.75rem);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
 
 .splash-bulb {
   display: block;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: clamp(1.1rem, 5.2vw, 2.5rem);
+  height: clamp(1.1rem, 5.2vw, 2.5rem);
   border-radius: 9999px;
   background: var(--color-surface-elevated);
   border: 2px solid var(--color-border);
@@ -343,13 +344,28 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
+  gap: clamp(0.35rem, 1.6vw, 0.6rem);
+  max-width: 100%;
+}
+
+.splash-mark {
+  width: clamp(6.5rem, 30vw, 11rem);
+  height: auto;
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: scale(0.8);
+  animation: splash-mark-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 1.62s;
 }
 
 .splash-wordmark {
-  font-size: 3.25rem;
+  font-size: clamp(1.5rem, 8vw, 3.25rem);
   font-weight: 700;
-  letter-spacing: 0.5em;
+  /* The trailing letter-spacing adds a phantom gap after the last glyph;
+     the matching negative margin re-centres the word. */
+  letter-spacing: clamp(0.1em, 1.1vw, 0.5em);
+  margin-right: calc(-1 * clamp(0.1em, 1.1vw, 0.5em));
+  max-width: 100%;
   color: var(--color-text-primary);
   text-shadow: 0 0 40px color-mix(in srgb, var(--color-primary) 55%, transparent);
   opacity: 0;
@@ -360,9 +376,10 @@ body {
 
 .splash-tagline {
   font-family: var(--font-f1);
-  font-size: 0.7rem;
+  font-size: clamp(0.55rem, 2.4vw, 0.7rem);
   font-weight: 700;
-  letter-spacing: 0.45em;
+  letter-spacing: clamp(0.16em, 1vw, 0.45em);
+  margin-right: calc(-1 * clamp(0.16em, 1vw, 0.45em));
   color: var(--color-text-muted);
   opacity: 0;
   transform: translateY(6px);
@@ -429,6 +446,23 @@ body {
   }
 }
 
+@keyframes splash-mark-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 0 26px color-mix(in srgb, var(--color-primary) 60%, transparent));
+  }
+}
+
 @keyframes splash-wordmark-in {
   0% {
     opacity: 0;
@@ -476,6 +510,7 @@ body {
   .splash-vignette {
     display: none;
   }
+  .splash-mark,
   .splash-wordmark,
   .splash-tagline {
     animation-duration: 0.01s;
