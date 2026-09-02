@@ -77,7 +77,7 @@ export default async function HomePage() {
 
   // The lap section follows the calendar: the next race's own circuit SVG,
   // fetched server-side, with baked geometry as the fallback.
-  const outline = await fetchCircuitOutline(nextRace?.circuit.imageUrl);
+  const outline = await fetchCircuitOutline(nextRace?.circuit.imageUrl, nextRace?.circuit.circuitId);
   const lapCircuit = {
     ...outline,
     name: nextRace?.circuit.circuitName || "The next lap",

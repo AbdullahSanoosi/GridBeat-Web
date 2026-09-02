@@ -1,16 +1,25 @@
 import { HOME_CIRCUITS } from "@/lib/home/circuits";
 
 /**
- * The real outline of whichever circuit is up next, pulled server-side from
- * the same SVG the Circuit Guide renders (`circuits.image_url`).
+ * The outline of whichever circuit is up next, for the homepage lap section.
  *
- * The homepage used to draw a hardcoded Suzuka lap. It now follows the
- * calendar: one fetch on the server (no CORS proxy needed, unlike the
- * client-side `/api/circuit-svg` route the dashboard uses), the single
- * `<path>` those files carry is lifted out with its viewBox, and the result
- * is cached with the page's own 15-minute revalidate. `HOME_CIRCUITS`'
- * baked geometry stays as the fallback so a third-party outage degrades to
- * a real track rather than an empty frame.
+ * Two sources, in this order, and the order matters because a car drives
+ * along this path:
+ *
+ * 1. `HOME_CIRCUITS` — centrelines baked from the MultiViewer API (the same
+ *    geometry the live track map uses). These are true racing lines: one
+ *    loop, always travelling forwards.
+ * 2. The circuit's own SVG from `circuits.image_url`, fetched server-side.
+ *    Covers all 78 circuits, but these files draw the *outline of the track
+ *    ribbon* — out along one edge and back along the other — so a marker
+ *    following one reverses direction where the outline doubles back.
+ *    Measured on Monza: heading snaps of up to 151° at three points per lap,
+ *    against 35° max on the baked centreline, and no lookahead window fixes
+ *    it because the reversal is real, not sampling noise.
+ *
+ * So a circuit with baked geometry gets the correct-looking lap, and
+ * everything else still renders a real track rather than an empty frame.
+ * `isCentreline` says which one a caller got.
  */
 export interface CircuitOutline {
   /** Closed SVG path data. */
@@ -19,15 +28,32 @@ export interface CircuitOutline {
   viewBox: string;
   /** True when this came from the live SVG rather than the baked fallback. */
   live: boolean;
+  /** True when the path is a true centreline, so a car marker won't reverse on it. */
+  isCentreline: boolean;
 }
 
 const FALLBACK: CircuitOutline = {
   d: HOME_CIRCUITS[0].d,
   viewBox: "0 0 1000 1000",
   live: false,
+  isCentreline: true,
 };
 
-export async function fetchCircuitOutline(imageUrl: string | null | undefined): Promise<CircuitOutline> {
+/** Baked circuits are keyed by display name ("MONZA"); race rows give ids ("monza"). */
+function bakedFor(circuitId: string | null | undefined): CircuitOutline | null {
+  if (!circuitId) return null;
+  const key = circuitId.toLowerCase();
+  const hit = HOME_CIRCUITS.find((c) => c.name.toLowerCase() === key);
+  return hit ? { d: hit.d, viewBox: "0 0 1000 1000", live: false, isCentreline: true } : null;
+}
+
+export async function fetchCircuitOutline(
+  imageUrl: string | null | undefined,
+  circuitId?: string | null,
+): Promise<CircuitOutline> {
+  const baked = bakedFor(circuitId);
+  if (baked) return baked;
+
   if (!imageUrl) return FALLBACK;
   try {
     const res = await fetch(imageUrl, { signal: AbortSignal.timeout(6000), next: { revalidate: 86400 } });
@@ -41,7 +67,7 @@ export async function fetchCircuitOutline(imageUrl: string | null | undefined): 
     const d = paths.reduce((a, b) => (b.length > a.length ? b : a));
 
     const viewBox = /viewBox="([^"]+)"/.exec(svg)?.[1] ?? "0 0 1000 1000";
-    return { d, viewBox, live: true };
+    return { d, viewBox, live: true, isCentreline: false };
   } catch {
     return FALLBACK;
   }

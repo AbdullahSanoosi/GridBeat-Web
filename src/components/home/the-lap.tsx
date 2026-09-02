@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   motion,
@@ -15,6 +15,8 @@ import {
 export interface LapCircuit {
   d: string;
   viewBox: string;
+  /** False for track-outline paths, where a car marker would reverse direction. */
+  isCentreline?: boolean;
   /** Circuit name, e.g. "Autodromo Nazionale di Monza". */
   name: string;
   /** Location line, e.g. "MONZA, ITALY". */
@@ -36,6 +38,10 @@ export interface LapCircuit {
  * lib/home/circuit-outline.ts) so this follows the calendar rather than
  * being pinned to one track.
  */
+
+/** Rendered length of the car in viewBox units at u=1, and the render's own w/h. */
+const CAR_LENGTH = 78;
+const CAR_ASPECT = 2.987;
 
 const SECTORS = [
   {
@@ -98,6 +104,9 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
 
   const carX = useMotionValue(0);
   const carY = useMotionValue(0);
+  // The car is a top-view render whose nose points +X, so it has to be
+  // rotated to the path's heading or it drives sideways round the lap.
+  const carAngle = useMotionValue(0);
 
   // Source SVGs don't share a coordinate space (the baked fallback is
   // 0 0 1000 1000, the live circuit files are ~524 wide), so every stroke
@@ -122,22 +131,30 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
     }
   }, [circuit.d]);
 
-  useMotionValueEvent(progress, "change", (p) => {
-    const path = pathRef.current;
-    if (!path || pathLength === 0) return;
-    const pt = path.getPointAtLength(Math.min(Math.max(p, 0), 1) * pathLength);
-    carX.set(pt.x);
-    carY.set(pt.y);
-  });
+  // Position + heading share one routine so the seed and the scroll updates
+  // can't drift apart. Heading comes from sampling a little way ahead along
+  // the path and taking the angle between the two points; the modulo keeps
+  // that sample on-track when the car is at the very end of a closed lap.
+  const placeCar = useCallback(
+    (p: number) => {
+      const path = pathRef.current;
+      if (!path || pathLength === 0) return;
+      const at = Math.min(Math.max(p, 0), 1) * pathLength;
+      const pt = path.getPointAtLength(at);
+      const ahead = path.getPointAtLength((at + pathLength * 0.004) % pathLength);
+      carX.set(pt.x);
+      carY.set(pt.y);
+      carAngle.set((Math.atan2(ahead.y - pt.y, ahead.x - pt.x) * 180) / Math.PI);
+    },
+    [pathLength, carX, carY, carAngle],
+  );
 
-  // Seed the marker at the start line so it's placed before first scroll.
+  useMotionValueEvent(progress, "change", placeCar);
+
+  // Seed at the start line so the car is placed before the first scroll.
   useEffect(() => {
-    const path = pathRef.current;
-    if (!path || pathLength === 0) return;
-    const pt = path.getPointAtLength(0);
-    carX.set(pt.x);
-    carY.set(pt.y);
-  }, [pathLength, carX, carY]);
+    placeCar(0);
+  }, [placeCar]);
 
   return (
     <section
@@ -178,29 +195,49 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              {/* Racing line — drawn by scroll. `pathLength` is Motion's own
-                  SVG draw primitive (0–1); it manages stroke-dasharray and
+              {/* Racing line, drawn in the lap's own three sector colours.
+                  `pathLength`/`pathOffset` are Motion's SVG draw primitives
+                  (both normalised 0–1); it manages stroke-dasharray and
                   -dashoffset internally, which a hand-rolled dasharray in
-                  `style` can't do reliably next to a MotionValue. */}
-              <motion.path
-                ref={pathRef}
-                d={circuit.d}
-                fill="none"
-                stroke="var(--color-primary)"
-                strokeWidth={7 * u}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{
-                  pathLength: reduced ? 1 : progress,
-                  filter: "drop-shadow(0 0 14px color-mix(in srgb, var(--color-primary) 70%, transparent))",
-                }}
-              />
-              {/* Car */}
-              {!reduced && pathLength > 0 && (
+                  `style` can't do reliably next to a MotionValue. Each
+                  segment starts at its own third of the lap and grows only
+                  within it, so the line changes colour exactly where the
+                  real sector boundaries are. */}
+              {SECTORS.map((sector, i) => (
+                <SectorTrace
+                  key={sector.n}
+                  d={circuit.d}
+                  index={i}
+                  color={sector.color}
+                  width={7 * u}
+                  progress={progress}
+                  reduced={!!reduced}
+                  pathRef={i === 0 ? pathRef : undefined}
+                />
+              ))}
+
+              {/* Car — the RB22 from above, turned to the racing line's
+                  heading. Nested groups keep translate and rotate in a fixed
+                  order; composing both on one element leaves the order up to
+                  however the transform string is assembled. */}
+              {!reduced && pathLength > 0 && circuit.isCentreline !== false && (
                 <motion.g style={{ x: carX, y: carY }}>
-                  <circle r={26 * u} fill="var(--color-primary)" opacity={0.22} />
-                  <circle r={13 * u} fill="var(--color-primary)" />
-                  <circle r={5 * u} fill="#fff" />
+                  <motion.g style={{ rotate: carAngle }}>
+                    <ellipse
+                      rx={CAR_LENGTH * u * 0.62}
+                      ry={CAR_LENGTH * u * 0.3}
+                      fill="var(--color-primary)"
+                      opacity={0.2}
+                      style={{ filter: `blur(${5 * u}px)` }}
+                    />
+                    <image
+                      href="/app/rb22-top.webp"
+                      x={(-CAR_LENGTH / 2) * u}
+                      y={(-CAR_LENGTH / CAR_ASPECT / 2) * u}
+                      width={CAR_LENGTH * u}
+                      height={(CAR_LENGTH / CAR_ASPECT) * u}
+                    />
+                  </motion.g>
                 </motion.g>
               )}
             </svg>
@@ -226,6 +263,51 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
   );
 }
 
+/**
+ * One third of the racing line, in that sector's colour, revealed as the car
+ * drives through it.
+ */
+function SectorTrace({
+  d,
+  index,
+  color,
+  width,
+  progress,
+  reduced,
+  pathRef,
+}: {
+  d: string;
+  index: number;
+  color: string;
+  width: number;
+  progress: ReturnType<typeof useSpring>;
+  reduced: boolean;
+  pathRef?: React.RefObject<SVGPathElement | null>;
+}) {
+  const span = 1 / SECTORS.length;
+  const start = index * span;
+  // Visible length within this segment only: 0 before the car arrives, its
+  // full third once the car has left it.
+  const drawn = useTransform(progress, (p) => Math.min(Math.max(p - start, 0), span));
+
+  return (
+    <motion.path
+      ref={pathRef}
+      d={d}
+      fill="none"
+      stroke={color}
+      strokeWidth={width}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        pathLength: reduced ? span : drawn,
+        pathOffset: start,
+        filter: `drop-shadow(0 0 14px color-mix(in srgb, ${color} 70%, transparent))`,
+      }}
+    />
+  );
+}
+
 function SectorCard({
   sector,
   index,
@@ -238,24 +320,47 @@ function SectorCard({
   reduced: boolean;
 }) {
   // Each sector lights up as the car reaches its third of the lap.
-  const start = index / SECTORS.length;
+  const span = 1 / SECTORS.length;
+  const start = index * span;
+  const end = start + span;
   const opacity = useTransform(progress, [start - 0.12, start + 0.04], [0.28, 1]);
   const x = useTransform(progress, [start - 0.12, start + 0.04], [24, 0]);
-  const borderColor = useTransform(progress, [start - 0.12, start + 0.04], [
-    "rgb(255 255 255 / 0.07)",
-    "rgb(255 255 255 / 0.16)",
-  ]);
+
+  // "Live" while the car is actually inside this sector — ramps up as it
+  // crosses the line and back down as it leaves, so exactly one card is lit
+  // at a time, the way a timing screen highlights the sector being set.
+  const live = useTransform(progress, [start - 0.03, start + 0.03, end - 0.03, end + 0.03], [0, 1, 1, 0]);
+  const borderColor = useTransform(live, (v) => `color-mix(in srgb, ${sector.color} ${8 + v * 46}%, rgb(255 255 255 / 0.07))`);
+  const boxShadow = useTransform(live, (v) => `0 22px 60px -30px color-mix(in srgb, ${sector.color} ${Math.round(v * 95)}%, transparent)`);
+  const railScale = useTransform(live, [0, 1], [0, 1]);
+  const badgeOpacity = useTransform(live, [0, 1], [0, 1]);
 
   return (
     <motion.div
-      style={reduced ? undefined : { opacity, x, borderColor }}
-      className="rounded-2xl border border-white/10 bg-(--color-surface)/70 p-4 backdrop-blur-sm sm:p-5 lg:p-[clamp(0.85rem,1.8vh,1.5rem)]"
+      style={reduced ? undefined : { opacity, x, borderColor, boxShadow }}
+      className="relative overflow-hidden rounded-2xl border border-white/10 bg-(--color-surface)/70 p-4 backdrop-blur-sm sm:p-5 lg:p-[clamp(0.85rem,1.8vh,1.5rem)]"
     >
+      {!reduced && (
+        <motion.span
+          aria-hidden="true"
+          className="absolute inset-y-3 left-0 w-[3px] origin-center rounded-full"
+          style={{ backgroundColor: sector.color, scaleY: railScale }}
+        />
+      )}
+
       <div className="mb-2.5 flex items-baseline gap-3 lg:mb-[clamp(0.4rem,1vh,0.75rem)]">
         <span className="font-[var(--font-f1)] text-[10px] font-bold tracking-[0.22em]" style={{ color: sector.color }}>
           SECTOR {sector.n}
         </span>
         <span className="h-px flex-1" style={{ backgroundColor: sector.color, opacity: 0.35 }} />
+        {!reduced && (
+          <motion.span
+            className="font-[var(--font-f1)] text-[9px] font-black tracking-[0.18em]"
+            style={{ color: sector.color, opacity: badgeOpacity }}
+          >
+            ON TRACK
+          </motion.span>
+        )}
       </div>
       <h3 className="font-[var(--font-f1)] text-lg font-bold sm:text-xl lg:text-[clamp(1.05rem,2.4vh,1.5rem)] lg:leading-tight">
         {sector.title}
