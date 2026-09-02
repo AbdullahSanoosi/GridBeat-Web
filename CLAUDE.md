@@ -139,6 +139,16 @@ Sections, all in `src/components/home/`:
   hand-rolled `strokeDasharray` in `style`: Motion owns the whole `style`
   object once a MotionValue is in it, so a static dasharray alongside one
   never updates (computed value stayed stuck at `1px` — the line never drew).
+  **`pathOffset` is a second, sharper version of the same trap: it must be a
+  MotionValue too.** Motion converts it to `stroke-dashoffset` only inside
+  `addSVGPathValue` (motion-dom's SVG effect), which runs for MotionValues
+  only — a plain number in `style` is dropped with no warning and no type
+  error. That shipped once: the racing line's three sector-coloured segments
+  each passed `pathOffset: index / 3` as a constant, all three resolved to
+  `stroke-dashoffset: 0px`, and every sector drew from the start line stacked
+  on the others. Diagnosed by reading the computed dashoffsets off the DOM
+  (`0px, 0px, 0px`; correct is `0 / -0.333 / -0.667`), not by looking at it —
+  the symptom just reads as "the colours are wrong".
 - `telemetry-section.tsx` + `lib/home/telemetry.ts` — speed/throttle/brake
   over one Monza lap, hand-rolled SVG with a hover crosshair. The trace is
   **derived, not invented**: MultiViewer's full-resolution Monza centreline
