@@ -4,6 +4,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  Archive,
+  BarChart3,
+  CalendarDays,
+  GraduationCap,
+  Map,
+  Menu,
+  Newspaper,
+  Radio,
+  Scale,
+  Trophy,
+  Crown,
+  type LucideIcon,
+} from "lucide-react";
 import { useSectionStore } from "@/lib/nav/section-store";
 
 /**
@@ -14,27 +28,33 @@ import { useSectionStore } from "@/lib/nav/section-store";
  * different affordance for a viewport too narrow for a persistent 240px
  * column. Grows as each route lands; only link routes that actually exist.
  */
-const NAV_ITEMS = [
-  { href: "/live", label: "Live Timing", icon: "🔴" },
-  { href: "/schedule", label: "Schedule", icon: "📅" },
-  { href: "/standings", label: "Standings", icon: "🏆" },
-  { href: "/stewards-room", label: "Stewards' Room", icon: "⚖️" },
-  { href: "/results", label: "Race Archives", icon: "🗃️" },
-  { href: "/stats", label: "Stats", icon: "📊" },
-  { href: "/circuits", label: "Circuit Guide", icon: "🗺️" },
-  { href: "/hall-of-fame", label: "Hall of Fame", icon: "👑" },
-  { href: "/learn", label: "Learn F1", icon: "🎓" },
-  { href: "/news", label: "News", icon: "📰" },
-] as const;
+const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/live", label: "Live Timing", icon: Radio },
+  { href: "/schedule", label: "Schedule", icon: CalendarDays },
+  { href: "/standings", label: "Standings", icon: Trophy },
+  { href: "/stewards-room", label: "Stewards' Room", icon: Scale },
+  { href: "/results", label: "Race Archives", icon: Archive },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
+  { href: "/circuits", label: "Circuit Guide", icon: Map },
+  { href: "/hall-of-fame", label: "Hall of Fame", icon: Crown },
+  { href: "/learn", label: "Learn F1", icon: GraduationCap },
+  { href: "/news", label: "News", icon: Newspaper },
+];
 
 const COLLAPSE_KEY = "gridbeat-sidebar-collapsed";
 
+/** Shows the whole mark (object-contain + screen blend), not a cropped box — see components/home/brand-mark.tsx for the same treatment on the marketing page. */
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <span className="flex items-center gap-2.5">
-      <span className={`relative overflow-hidden rounded-lg border border-white/10 ${compact ? "h-8 w-8" : "h-9 w-12"}`}>
-        <Image src="/brand/logo-transparent.png" alt="" fill sizes={compact ? "32px" : "48px"} className="scale-[1.32] object-cover" />
-      </span>
+      <Image
+        src="/brand/logo-transparent.png"
+        alt=""
+        width={compact ? 33 : 42}
+        height={compact ? 22 : 28}
+        className="mix-blend-screen object-contain"
+        style={{ height: compact ? 22 : 28, width: "auto" }}
+      />
       {!compact && <span className="font-[var(--font-f1)] text-lg font-bold italic tracking-[-0.04em]">GRIDBEAT</span>}
     </span>
   );
@@ -94,7 +114,7 @@ function NavLinks({
                 : "text-(--color-text-secondary) hover:bg-(--color-surface-elevated) hover:text-(--color-text-primary)"
             }`}
           >
-            <span aria-hidden="true">{item.icon}</span>
+            <item.icon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden="true" />
             {!collapsed && <span className="truncate">{item.label}</span>}
           </Link>
         );
@@ -147,7 +167,7 @@ export function Sidebar() {
           aria-label="Open menu"
           className="flex h-9 w-9 items-center justify-center rounded-lg border border-(--color-border) text-(--color-text-secondary)"
         >
-          ☰
+          <Menu className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 

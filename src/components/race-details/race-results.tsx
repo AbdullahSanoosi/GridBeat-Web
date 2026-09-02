@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Flag, Trophy } from "lucide-react";
 import { getFullRaceResults, getPitStops, getLapLeaders } from "@/lib/api/stats-api";
 import { staleTime } from "@/lib/query/ttl";
 import { teamColor, circuitColor } from "@/lib/theme/colors";
@@ -133,7 +134,7 @@ function ResultBanner({
           className="rounded-full px-3 py-1 font-[var(--font-f1)] text-[10px] font-extrabold tracking-[0.14em]"
           style={{ color: accent, backgroundColor: `color-mix(in srgb, ${accent} 20%, transparent)` }}
         >
-          🏁 RACE COMPLETE
+          <Flag className="mr-1.5 inline h-3 w-3 align-[-1px]" aria-hidden="true" />RACE COMPLETE
         </span>
         {laps && (
           <span className="ml-auto text-[10px] font-bold tracking-[0.14em] text-(--color-text-muted)">{laps} LAPS</span>
@@ -143,7 +144,7 @@ function ResultBanner({
       {winner && (
         <>
           <div className="relative mt-4 flex items-center gap-1.5 text-[10px] font-black tracking-[0.2em]" style={{ color: winnerColor }}>
-            🏆 WINNER
+            <Trophy className="mr-1.5 inline h-3 w-3 align-[-1px]" aria-hidden="true" />WINNER
           </div>
           <div className="relative mt-1 truncate font-[var(--font-f1)] text-[40px] leading-none font-black">
             {winner.driver.familyName.toUpperCase()}

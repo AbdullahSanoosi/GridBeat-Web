@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { RefreshCw, TrendingUp } from "lucide-react";
 import { getSyncStatus } from "@/lib/api/stats-api";
 import { staleTime } from "@/lib/query/ttl";
 import { useMounted } from "@/hooks/use-mounted";
@@ -56,7 +57,7 @@ function QualiToRaceEntry() {
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
         style={{ backgroundColor: "color-mix(in srgb, var(--color-primary) 18%, transparent)" }}
       >
-        📈
+        <TrendingUp className="h-4 w-4" aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-[13px] font-extrabold tracking-wide">QUALI → RACE PROGRESSION</div>
@@ -106,7 +107,7 @@ function LastUpdatedFooter({ status }: { status: Record<string, unknown> }) {
   return (
     <div className="mt-2 flex items-center gap-3 rounded-2xl border border-(--color-border) bg-(--color-surface) px-5 py-4">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--color-primary)/15 text-base">
-        🔄
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </div>
       <div className="min-w-0">
         <div className="text-[9px] font-bold tracking-[0.16em] text-(--color-text-muted)">LAST UPDATED</div>

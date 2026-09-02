@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Trophy } from "lucide-react";
 import { getFullSprintResults } from "@/lib/api/stats-api";
 import { staleTime } from "@/lib/query/ttl";
 import { teamColor, circuitColor } from "@/lib/theme/colors";
@@ -81,7 +82,7 @@ function SprintBanner({ results, circuitId, round }: { results: RaceResult[]; ci
       {winner && (
         <>
           <div className="relative mt-4 text-[10px] font-black tracking-[0.2em]" style={{ color: winnerColor }}>
-            🏆 WINNER
+            <Trophy className="mr-1.5 inline h-3 w-3 align-[-1px]" aria-hidden="true" />WINNER
           </div>
           <div className="relative mt-1 truncate font-[var(--font-f1)] text-[36px] leading-none font-black">
             {winner.driver.familyName.toUpperCase()}

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { CalendarDays, Home, ScrollText, Trophy } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { PhoneFrame } from "@/components/home/phone-frame";
 import { BrandMark } from "@/components/home/brand-mark";
@@ -102,11 +103,13 @@ export function Hero({ season, standings, nextRace }: { season: number; standing
             </Link>
           </motion.div>
 
-          <motion.div {...reveal(0.4)} className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-[10px] uppercase tracking-[0.18em] text-white/34">
-            <span>Live timing</span>
-            <span>3D track map</span>
-            <span>Telemetry</span>
-            <span>Team radio</span>
+          <motion.div {...reveal(0.4)} className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
+            {["Live timing", "3D track map", "Telemetry", "Team radio"].map((item) => (
+              <span key={item} className="flex items-center gap-2 text-[10px] tracking-[0.18em] text-white/34 uppercase">
+                <span className="h-1 w-1 rounded-full bg-[#df3409]" />
+                {item}
+              </span>
+            ))}
           </motion.div>
         </div>
 
@@ -127,7 +130,7 @@ export function Hero({ season, standings, nextRace }: { season: number; standing
             <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/35">Up next · R{nextRace.round}</div>
             <div className="mt-1 truncate text-[11px] font-bold text-white">{nextRace.raceName}</div>
           </div>}
-          <PhoneFrame ariaLabel="GridBeat championship standings mobile screen" glow className="mx-auto w-[72%] max-w-[17rem]">
+          <PhoneFrame ariaLabel="GridBeat championship standings on iOS" platform="ios" glow className="mx-auto w-[72%] max-w-[17rem]">
             <HeroPhoneScreen season={season} standings={standings.slice(0, 6)} />
           </PhoneFrame>
         </motion.div>
@@ -160,8 +163,12 @@ function HeroPhoneScreen({ season, standings }: { season: number; standings: Hom
           </div>
         ))}
       </div>
-      <div className="mt-[4%] flex h-[12%] items-center justify-around rounded-full border border-[#2c2c2c] bg-black px-[3%] text-[5cqw] text-white/30">
-        <span className="text-white">⌂</span><span>▣</span><span>⚑</span><span>◫</span><span className="flex h-[9cqw] w-[9cqw] items-center justify-center rounded-full bg-[#b52400] text-[3cqw] font-bold text-white">LIVE</span>
+      <div className="mt-[4%] flex h-[12%] items-center justify-around rounded-full border border-[#2c2c2c] bg-black px-[3%]">
+        <Home className="h-[4.6cqw] w-[4.6cqw] text-white" strokeWidth={2.2} aria-hidden="true" />
+        <CalendarDays className="h-[4.6cqw] w-[4.6cqw] text-white/30" strokeWidth={2.2} aria-hidden="true" />
+        <Trophy className="h-[4.6cqw] w-[4.6cqw] text-white/30" strokeWidth={2.2} aria-hidden="true" />
+        <ScrollText className="h-[4.6cqw] w-[4.6cqw] text-white/30" strokeWidth={2.2} aria-hidden="true" />
+        <span className="flex h-[9cqw] w-[9cqw] items-center justify-center rounded-full bg-[#b52400] text-[3cqw] font-bold text-white">LIVE</span>
       </div>
     </div>
   );

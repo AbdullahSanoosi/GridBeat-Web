@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Check } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getCircuitDetail, circuitBasicField } from "@/lib/api/enrichment";
@@ -174,7 +175,7 @@ export function SessionScheduleView({
                 >
                   {sess.timed ? timeFmt.format(sess.at) : "TBD"}
                 </div>
-                {past && <span className="shrink-0 text-(--color-text-muted)">✓</span>}
+                {past && <Check className="h-3.5 w-3.5 shrink-0 text-(--color-text-muted)" aria-label="Completed" />}
               </div>
             );
           })}

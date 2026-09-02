@@ -1,6 +1,7 @@
 "use client";
 
 import { drsActive, formattedLapTime, teamColorHex, type CarTelemetry, type DriverSteward, type LeaderboardEntry } from "@/lib/models/live";
+import { Zap } from "lucide-react";
 import { tyreColor, tyreLabel } from "@/lib/theme/colors";
 
 const SECTOR_COLORS: Record<number, string> = {
@@ -99,7 +100,7 @@ export function TowerRow({
               DRS
             </span>
           )}
-          {row.hasFastestLap && <span className="text-[11px] text-(--color-sector-purple)">⚡</span>}
+          {row.hasFastestLap && <Zap className="h-3 w-3 shrink-0 text-(--color-sector-purple)" aria-label="Fastest lap" />}
           {delta != null &&
             (delta === 0 ? (
               <span className="text-[10px] font-bold text-(--color-text-muted)">–</span>

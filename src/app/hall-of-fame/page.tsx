@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getDriverHallOfFame, getConstructorHallOfFame } from "@/lib/models/hall-of-fame";
 import { staleTime } from "@/lib/query/ttl";
@@ -94,7 +95,7 @@ function DriverHero({ driver }: { driver: HallOfFameDriver }) {
       )}
       <div className="relative max-w-[75%] sm:max-w-[55%]">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-[#FFD700]/50 bg-[#FFD700]/18 px-2.5 py-1 font-[var(--font-f1)] text-[9px] font-black tracking-[0.14em] text-[#FFD700]">
-          🏆 {driver.titles > 0 ? `${driver.titles}× WORLD CHAMPION` : "TOP OF THE HALL"}
+          <Trophy className="mr-1 inline h-3 w-3 align-[-1px]" aria-hidden="true" />{driver.titles > 0 ? `${driver.titles}× WORLD CHAMPION` : "TOP OF THE HALL"}
         </span>
         <div className="mt-4 text-[11px] font-bold tracking-[0.2em] text-(--color-text-muted)">
           {firstName.toUpperCase()}
@@ -129,7 +130,7 @@ function ConstructorHero({ constructor: c }: { constructor: HallOfFameConstructo
       )}
       <div className="relative max-w-[75%] sm:max-w-[60%]">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-[#FFD700]/50 bg-[#FFD700]/18 px-2.5 py-1 font-[var(--font-f1)] text-[9px] font-black tracking-[0.14em] text-[#FFD700]">
-          🏆 {c.titles > 0 ? `${c.titles}× CONSTRUCTORS' CHAMPION` : "TOP OF THE HALL"}
+          <Trophy className="mr-1 inline h-3 w-3 align-[-1px]" aria-hidden="true" />{c.titles > 0 ? `${c.titles}× CONSTRUCTORS' CHAMPION` : "TOP OF THE HALL"}
         </span>
         <div className="mt-4 truncate font-[var(--font-f1)] text-[30px] leading-none font-black tracking-tight" style={{ textShadow: "0 0 18px rgba(255,215,0,0.5)" }}>
           {c.name.toUpperCase()}

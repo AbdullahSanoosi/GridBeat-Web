@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Flag, Flame, Sparkles, TrendingUp, Trophy, Zap, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -36,13 +37,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
  * trivia, not fabricated. Rotates deterministically by the current minute,
  * same as the Flutter `_ArchiveHero`.
  */
-const ARCHIVE_FACTS: { icon: string; color: string; fact: string }[] = [
-  { icon: "🏁", color: "#E80020", fact: "The first F1 World Championship race was held at Silverstone on 13 May 1950." },
-  { icon: "⚡", color: "#06B6D4", fact: "Michael Schumacher won 7 consecutive races in 2004 — a streak that took 19 years to beat." },
-  { icon: "🏆", color: "#FFD700", fact: "Juan Manuel Fangio won 5 World Championships in 8 seasons — a record that stood for 46 years." },
-  { icon: "🔥", color: "#FF8000", fact: "The closest F1 finish ever was 0.010s — Peter Gethin won the 1971 Italian GP at 242 km/h." },
-  { icon: "💫", color: "#8B5CF6", fact: "Ayrton Senna's 65 pole positions were earned in an era with no power steering or traction control." },
-  { icon: "📈", color: "#10B981", fact: "Ferrari has competed in every single F1 World Championship season since the very first in 1950." },
+const ARCHIVE_FACTS: { icon: LucideIcon; color: string; fact: string }[] = [
+  { icon: Flag, color: "#E80020", fact: "The first F1 World Championship race was held at Silverstone on 13 May 1950." },
+  { icon: Zap, color: "#06B6D4", fact: "Michael Schumacher won 7 consecutive races in 2004 — a streak that took 19 years to beat." },
+  { icon: Trophy, color: "#FFD700", fact: "Juan Manuel Fangio won 5 World Championships in 8 seasons — a record that stood for 46 years." },
+  { icon: Flame, color: "#FF8000", fact: "The closest F1 finish ever was 0.010s — Peter Gethin won the 1971 Italian GP at 242 km/h." },
+  { icon: Sparkles, color: "#8B5CF6", fact: "Ayrton Senna's 65 pole positions were earned in an era with no power steering or traction control." },
+  { icon: TrendingUp, color: "#10B981", fact: "Ferrari has competed in every single F1 World Championship season since the very first in 1950." },
 ];
 
 export default function ResultsPage() {
@@ -181,7 +182,7 @@ function ArchiveHero() {
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-lg"
         style={{ color: f.color, borderColor: `color-mix(in srgb, ${f.color} 40%, transparent)`, backgroundColor: `color-mix(in srgb, ${f.color} 18%, transparent)` }}
       >
-        {f.icon}
+        <f.icon className="h-5 w-5" style={{ color: f.color }} aria-hidden="true" />
       </div>
       <div className="min-w-0">
         <div className="text-[10px] font-black tracking-[0.16em]" style={{ color: f.color }}>

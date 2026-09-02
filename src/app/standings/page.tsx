@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getDriverStandings, getConstructorStandings } from "@/lib/api/stats-api";
 import { getDriverDetail, getConstructorDetail } from "@/lib/api/enrichment";
@@ -164,7 +165,7 @@ function DriverBanner({ leader }: { leader: DriverStanding }) {
           className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-[var(--font-f1)] text-[9px] font-black tracking-[0.14em]"
           style={{ color: accent, borderColor: `color-mix(in srgb, ${accent} 45%, transparent)`, backgroundColor: `color-mix(in srgb, ${accent} 18%, transparent)` }}
         >
-          🏆 CHAMPIONSHIP LEADER
+          <Trophy className="mr-1 inline h-3 w-3 align-[-1px]" aria-hidden="true" />CHAMPIONSHIP LEADER
         </span>
         <div className="mt-4 text-[11px] font-bold tracking-[0.2em] text-(--color-text-muted)">
           {leader.driver.givenName.toUpperCase()}
@@ -215,7 +216,7 @@ function ConstructorBanner({ leader }: { leader: ConstructorStanding }) {
           className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-[var(--font-f1)] text-[9px] font-black tracking-[0.14em]"
           style={{ color: accent, borderColor: `color-mix(in srgb, ${accent} 45%, transparent)`, backgroundColor: `color-mix(in srgb, ${accent} 18%, transparent)` }}
         >
-          🏆 CHAMPIONSHIP LEADER
+          <Trophy className="mr-1 inline h-3 w-3 align-[-1px]" aria-hidden="true" />CHAMPIONSHIP LEADER
         </span>
         <div className="mt-4 truncate font-[var(--font-f1)] text-[30px] leading-none font-black tracking-tight">
           {leader.constructor.name.toUpperCase()}

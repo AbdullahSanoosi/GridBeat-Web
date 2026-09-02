@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { LESSONS, type Lesson } from "@/lib/models/lessons";
 
 /**
@@ -65,7 +66,7 @@ function LessonCard({ lesson }: { lesson: Lesson }) {
           className="flex h-11 w-11 items-center justify-center rounded-xl text-lg"
           style={{ backgroundColor: `color-mix(in srgb, ${lesson.accent} 13%, transparent)` }}
         >
-          {lesson.icon}
+          <lesson.icon className="h-5 w-5" style={{ color: lesson.accent }} strokeWidth={2} aria-hidden="true" />
         </div>
         <span className="font-mono text-[11px] font-bold text-(--color-text-muted)">
           {String(lesson.number).padStart(2, "0")}
@@ -86,7 +87,7 @@ function LessonCard({ lesson }: { lesson: Lesson }) {
         </div>
         <p className="mt-2 text-[13px] leading-relaxed text-(--color-text-secondary)">{lesson.blurb}</p>
         <div className="mt-2.5 flex items-center gap-1.5 text-[11.5px] font-medium text-(--color-text-muted)">
-          <span>✓</span>
+          <Check className="h-3 w-3 shrink-0" aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate">{lesson.payoff}</span>
           {enabled && <span className="shrink-0 text-(--color-text-muted)">›</span>}
         </div>

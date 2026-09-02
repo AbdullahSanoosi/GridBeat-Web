@@ -1,5 +1,6 @@
 "use client";
 
+import { Flag, Trophy, type LucideIcon } from "lucide-react";
 import type { ComputedStat } from "@/lib/api/types";
 import { circuitLiveStats, maidenPodiums, displayNameFor } from "@/lib/models/circuit-stats";
 
@@ -25,10 +26,10 @@ export function CareerFirstsCard({
       </div>
       <div className="flex flex-col gap-3">
         {live.maidenWin && (
-          <FirstRow icon="🏆" label="MAIDEN WIN" name={displayNameFor(live.maidenWin.driverId, names)} year={String(live.maidenWin.season)} accent={accent} />
+          <FirstRow icon={Trophy} label="MAIDEN WIN" name={displayNameFor(live.maidenWin.driverId, names)} year={String(live.maidenWin.season)} accent={accent} />
         )}
         {live.maidenPole && (
-          <FirstRow icon="🚩" label="MAIDEN POLE" name={displayNameFor(live.maidenPole.driverId, names)} year={String(live.maidenPole.season)} accent={accent} />
+          <FirstRow icon={Flag} label="MAIDEN POLE" name={displayNameFor(live.maidenPole.driverId, names)} year={String(live.maidenPole.season)} accent={accent} />
         )}
         {podiums.length > 0 && (
           <div>
@@ -50,10 +51,10 @@ export function CareerFirstsCard({
   );
 }
 
-function FirstRow({ icon, label, name, year, accent }: { icon: string; label: string; name: string; year: string; accent: string }) {
+function FirstRow({ icon: Icon, label, name, year, accent }: { icon: LucideIcon; label: string; name: string; year: string; accent: string }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="text-lg">{icon}</span>
+      <span className="text-lg"><Icon className="h-4 w-4" aria-hidden="true" /></span>
       <div className="min-w-0 flex-1">
         <div className="text-[9px] font-extrabold tracking-[0.14em]" style={{ color: accent }}>
           {label}

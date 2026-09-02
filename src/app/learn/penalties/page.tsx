@@ -86,7 +86,7 @@ function KindCard({ stats, expanded, onTap }: { stats: PenaltyKindStats; expande
             border: `1px solid color-mix(in srgb, ${k.accent} 35%, transparent)`,
           }}
         >
-          {k.icon}
+          <k.icon className="h-4 w-4" style={{ color: k.accent }} strokeWidth={2} aria-hidden="true" />
         </div>
         <span className="min-w-0 flex-1 truncate text-sm font-extrabold">{k.name}</span>
         <span className="shrink-0 text-xs font-black" style={{ color: k.accent }}>

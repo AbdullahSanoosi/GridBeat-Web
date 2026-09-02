@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Pause, Play } from "lucide-react";
 import type { RaceControlMessage, PitStop, TeamRadioMessage } from "@/lib/models/live";
 import { formattedPitDuration, pitStopTimeStr } from "@/lib/models/live";
 import { useRadioPlaybackStore } from "@/lib/live/radio-playback-store";
@@ -144,7 +145,7 @@ export function TeamRadioList({ messages }: { messages: TeamRadioMessage[] }) {
               onClick={() => toggle(m.recordingUrl)}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--color-primary) text-(--color-on-secondary)"
             >
-              {isPlaying ? "❚❚" : "▶"}
+              {isPlaying ? <Pause className="h-3.5 w-3.5" aria-hidden="true" /> : <Play className="h-3.5 w-3.5 translate-x-px" aria-hidden="true" />}
             </button>
             <div className="min-w-0 flex-1">
               <div className="mb-0.5 flex items-center gap-2 text-xs">

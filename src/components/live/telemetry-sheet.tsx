@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle, Scale } from "lucide-react";
 import {
   drsActive,
   type CarTelemetry,
@@ -377,7 +378,7 @@ function StewardBanner({ steward }: { steward: DriverSteward }) {
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
         style={{ backgroundColor: `color-mix(in srgb, ${color} 22%, transparent)` }}
       >
-        {isPenalty ? "⚖" : "⚠"}
+        {isPenalty ? <Scale className="h-4 w-4" aria-hidden="true" /> : <AlertTriangle className="h-4 w-4" aria-hidden="true" />}
       </div>
       <div>
         <div className="text-[11px] font-black tracking-widest" style={{ color }}>

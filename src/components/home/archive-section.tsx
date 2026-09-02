@@ -148,9 +148,9 @@ function FigureGrid({ figures }: { figures: { label: string; value: number }[] }
   }, [figures]);
 
   return (
-    <dl ref={rootRef} className="mt-12 grid grid-cols-2 gap-x-8 gap-y-9 sm:grid-cols-3 lg:grid-cols-6">
+    <dl ref={rootRef} className="mt-12 grid grid-cols-2 gap-x-10 gap-y-10 sm:grid-cols-3 sm:gap-x-12 lg:grid-cols-6 lg:gap-x-8">
       {figures.map((figure) => (
-        <div key={figure.label}>
+        <div key={figure.label} className="min-w-0">
           <span
             data-rule
             className="block h-px w-full origin-left bg-gradient-to-r from-[#df3409] to-transparent"
@@ -158,7 +158,7 @@ function FigureGrid({ figures }: { figures: { label: string; value: number }[] }
           />
           <dd
             data-count={figure.value}
-            className="mt-4 font-[var(--font-f1)] text-[clamp(1.9rem,3.4vw,2.9rem)] leading-none font-bold tabular-nums"
+            className="mt-4 font-[var(--font-f1)] text-[clamp(1.6rem,2.1vw,2.4rem)] leading-none font-bold tracking-[-0.02em] tabular-nums"
           >
             {figure.value.toLocaleString()}
           </dd>

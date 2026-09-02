@@ -11,6 +11,12 @@
  * as a separate offence.
  */
 
+import type { LucideIcon } from "lucide-react";
+import {
+  Ruler, TrafficCone, AlertTriangle, Flag, Lock, CarFront, Timer, TrafficCone as Lights,
+  MoveHorizontal, Megaphone, Flag as FlagBlue, OctagonX, Ban, CircleAlert, Wrench, Mic,
+} from "lucide-react";
+
 export interface PenaltyKind {
   name: string;
   /** What the rule is, for someone who has never heard of it. */
@@ -19,7 +25,7 @@ export interface PenaltyKind {
   why: string;
   /** What a driver typically gets for it. */
   typical: string;
-  icon: string;
+  icon: LucideIcon;
   accent: string;
   /** Lowercased fragments matched against a decision's title and reason. */
   match: string[];
@@ -32,7 +38,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     why: "The line defines the circuit. Running wide is usually faster, so without the rule the track would quietly get bigger all weekend.",
     typical:
       "The lap time is deleted. Do it repeatedly in a race and it escalates to a black-and-white flag, then a time penalty.",
-    icon: "\u{1F4CF}",
+    icon: Ruler,
     accent: "#60A5FA",
     match: ["deleted lap", "leaving the track", "track limit", "gaining an advantage"],
   },
@@ -41,7 +47,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "A strict speed limit, normally 80 km/h, and a red light at the pit exit that must be obeyed.",
     why: "Mechanics stand within a metre of moving cars. It is the one place on track where people are on foot.",
     typical: "A fine in practice. During the race it becomes a time penalty, because there the speed would have won time.",
-    icon: "\u{1F6A5}",
+    icon: TrafficCone,
     accent: "#F59E0B",
     match: ["pit lane speeding", "speeding in the pit", "red light at pit exit", "pit exit"],
   },
@@ -50,7 +56,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "The team let a car out of its pit box into the path of another car or with something not properly attached.",
     why: "A car leaving the box has no speed and no view. Getting it wrong at the busiest moment of a race is how pit lane collisions happen.",
     typical: "A time penalty for the driver and a fine for the team — the mistake is the crew's, but the car carries it.",
-    icon: "\u{26A0}\u{FE0F}",
+    icon: AlertTriangle,
     accent: "#EF4444",
     match: ["unsafe release", "unsafe condition"],
   },
@@ -59,7 +65,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "Yellow means danger ahead — slow down, be ready to stop, and do not overtake. Double yellow means be prepared to stop completely.",
     why: "There may be a stopped car or a marshal on the track surface just out of sight. It is the rule that most directly protects lives.",
     typical: "Among the most heavily punished things in F1 — a grid penalty or time penalty plus penalty points, even for a small margin.",
-    icon: "\u{1F7E1}",
+    icon: Flag,
     accent: "#FFD700",
     match: ["yellow flag", "double yellow", "yellow flags"],
   },
@@ -68,7 +74,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "From the start of qualifying the cars are impounded — teams may not change the setup before the race.",
     why: "It stops teams qualifying with a light, fast car and then rebuilding it into a different one for Sunday.",
     typical: "Starting from the pit lane, which usually costs more than the change was worth.",
-    icon: "\u{1F512}",
+    icon: Lock,
     accent: "#A78BFA",
     match: ["parc ferme", "parc fermé", "changes made during"],
   },
@@ -77,7 +83,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "The stewards judged one driver predominantly to blame for contact.",
     why: "Racing incidents happen and often go unpunished. This is for when the stewards think one driver could reasonably have avoided it.",
     typical: "A 5 or 10 second time penalty, usually with penalty points on the licence.",
-    icon: "\u{1F4A5}",
+    icon: CarFront,
     accent: "#EF4444",
     match: ["collision", "causing a collision", "incident with"],
   },
@@ -86,7 +92,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "In Q1 you must set a lap within 107% of the fastest time, or you may not be permitted to start.",
     why: "A car far off the pace is a moving obstacle for everyone else. The stewards can still allow it if there is a good reason.",
     typical: "Usually permitted to start anyway, on the strength of practice pace — refusal is rare.",
-    icon: "\u{23F1}\u{FE0F}",
+    icon: Timer,
     accent: "#34D399",
     match: ["107"],
   },
@@ -95,7 +101,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "Moving before the lights go out, or not being correctly placed in your grid box.",
     why: "Twenty cars accelerate from a standstill within a car's length of each other. The procedure is what keeps that survivable.",
     typical: "A 5 second time penalty, served at the first pit stop.",
-    icon: "\u{1F6A6}",
+    icon: Lights,
     accent: "#F59E0B",
     match: [
       "starting procedure",
@@ -110,7 +116,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "You may make one move to defend your position. Moving back across to block again is not allowed.",
     why: "At 300 km/h the car behind commits to a side early. A second move takes away the room they were already using.",
     typical: "A time penalty, and penalty points if it was dangerous.",
-    icon: "\u{2194}\u{FE0F}",
+    icon: MoveHorizontal,
     accent: "#60A5FA",
     match: ["change of direction", "more than one change", "defending"],
   },
@@ -119,7 +125,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: 'Specific instructions issued for the weekend — most often a maximum time for an out-lap, the "SC2-SC1" delta.',
     why: "Without it, drivers crawl on out-laps to build a gap for a fast lap, and the ones actually on a flying lap arrive at walking traffic.",
     typical: "A reprimand or grid penalty, depending on how far over the delta they were.",
-    icon: "\u{1F4E2}",
+    icon: Megaphone,
     accent: "#A78BFA",
     match: [
       "sc2-sc1",
@@ -135,7 +141,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "A blue flag means a faster car is about to lap you. You must let it past at the first safe opportunity.",
     why: "The leaders are racing each other. A driver a lap down holding them up would decide a race they are not part of.",
     typical: "A time penalty, or penalty points if it went on for several corners.",
-    icon: "\u{1F535}",
+    icon: FlagBlue,
     accent: "#60A5FA",
     match: ["blue flag"],
   },
@@ -144,7 +150,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "A red flag stops the session. Cars must slow immediately and return to the pit lane.",
     why: "It is called when the track is genuinely unsafe — a wrecked car, debris, or conditions too poor to continue.",
     typical: "A grid penalty for speeding under it, since the point is that nobody is racing any more.",
-    icon: "\u{1F534}",
+    icon: OctagonX,
     accent: "#EF4444",
     match: ["red flag"],
   },
@@ -153,7 +159,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "Getting in the way of a driver on a flying lap, usually in qualifying.",
     why: "A qualifying lap is one shot at a clear track. Meeting a slow car in a fast corner ruins it, and the driver behind has nowhere to go.",
     typical: "A grid penalty of three places, or a reprimand if it was marginal.",
-    icon: "\u{1F6AB}",
+    icon: Ban,
     accent: "#F59E0B",
     match: ["impeding", "impeded"],
   },
@@ -162,7 +168,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "Driving judged erratic or dangerous without being a specific named offence — weaving on a straight, forcing another car off the road.",
     why: "A catch-all for behaviour the stewards consider unsafe even where no single rule names it.",
     typical: "Varies widely with severity, from a reprimand to a grid drop with penalty points.",
-    icon: "\u{2757}",
+    icon: CircleAlert,
     accent: "#EF4444",
     match: ["erratic", "dangerous driving", "forcing another driver"],
   },
@@ -171,7 +177,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "The car itself did not comply — bodywork, DRS, or power unit parts outside what the regulations allow.",
     why: "The technical rules are what make it a contest of driving rather than of budget. Breaches are treated as absolute, not negotiable.",
     typical: "Usually disqualification from the session, because the advantage cannot be undone by a time penalty.",
-    icon: "\u{1F527}",
+    icon: Wrench,
     accent: "#60A5FA",
     match: ["technical regulations", "drs", "change to pu elements"],
   },
@@ -180,7 +186,7 @@ export const PENALTY_KINDS: PenaltyKind[] = [
     what: "Obligations away from driving — press conferences, media sessions, fan engagement, the drivers' parade.",
     why: "These are written into the rules because the championship sells access to the drivers, not only the racing.",
     typical: "A fine for the team, occasionally a reprimand for the driver.",
-    icon: "\u{1F3A4}",
+    icon: Mic,
     accent: "#A78BFA",
     match: ["fan engagement", "media commitment", "press conference", "drivers parade", "parade"],
   },

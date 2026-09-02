@@ -13,6 +13,9 @@
  * instead of a not-yet-built one.
  */
 
+import type { LucideIcon } from "lucide-react";
+import { Car, CircleDot, Wind, History, Trophy, Scale, Flag } from "lucide-react";
+
 export type LessonStatus = "ready" | "comingSoon" | "mobileOnly";
 
 export interface Lesson {
@@ -20,7 +23,7 @@ export interface Lesson {
   title: string;
   subtitle: string;
   blurb: string;
-  icon: string;
+  icon: LucideIcon;
   accent: string;
   status: LessonStatus;
   route: string | null;
@@ -34,7 +37,7 @@ export const LESSONS: Lesson[] = [
     subtitle: "What am I looking at?",
     blurb:
       "Every major part of a modern F1 car and what it actually does. Start here — nothing later makes sense without the vocabulary.",
-    icon: "\u{1F3CE}\u{FE0F}",
+    icon: Car,
     accent: "#22D3EE",
     status: "mobileOnly",
     route: null,
@@ -46,7 +49,7 @@ export const LESSONS: Lesson[] = [
     subtitle: "Why tyres decide races",
     blurb:
       "The three dry compounds side by side. Tyre choice explains more race outcomes than anything else, and it is the thing new viewers most often miss.",
-    icon: "\u{1F6DE}",
+    icon: CircleDot,
     accent: "#FFD42A",
     status: "mobileOnly",
     route: null,
@@ -58,7 +61,7 @@ export const LESSONS: Lesson[] = [
     subtitle: "Why the car is shaped like that",
     blurb:
       "Downforce against drag, and the trade every team makes each weekend. Includes why a following car loses grip in dirty air.",
-    icon: "\u{1F4A8}",
+    icon: Wind,
     accent: "#7DD3FC",
     status: "mobileOnly",
     route: null,
@@ -70,7 +73,7 @@ export const LESSONS: Lesson[] = [
     subtitle: "How we got here",
     blurb:
       "A scrubbable timeline of the cars that changed the sport — from the wedge-shaped Lotus 72 to the most dominant season ever recorded. Includes the 1981 Lotus 88, twin-chassis and banned before it raced.",
-    icon: "\u{23F1}\u{FE0F}",
+    icon: History,
     accent: "#E8A33D",
     status: "ready",
     route: "/evolution",
@@ -82,7 +85,7 @@ export const LESSONS: Lesson[] = [
     subtitle: 'What "great" actually means',
     blurb:
       "Win rates, pole rates and margins put numbers behind the reverence, so you can compare eras instead of taking anyone's word for it.",
-    icon: "\u{1F3C6}",
+    icon: Trophy,
     accent: "#FFD700",
     status: "comingSoon",
     route: null,
@@ -94,7 +97,7 @@ export const LESSONS: Lesson[] = [
     subtitle: "Why did they get that?",
     blurb:
       "The rules that actually get broken, ordered by how often they really are, each with real incidents the stewards ruled on. Half of watching a race is knowing what just happened and why it cost someone.",
-    icon: "\u{2696}\u{FE0F}",
+    icon: Scale,
     accent: "#EF4444",
     status: "ready",
     route: "/learn/penalties",
@@ -106,7 +109,7 @@ export const LESSONS: Lesson[] = [
     subtitle: "Putting it together",
     blurb:
       "Weekend format, qualifying and the strategic picture in real time — where the lessons hand off to live timing and the rest of the app.",
-    icon: "\u{1F3C1}",
+    icon: Flag,
     accent: "#B52400",
     status: "ready",
     route: "/live",
