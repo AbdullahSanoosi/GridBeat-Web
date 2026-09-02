@@ -1,18 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  Activity,
-  BookOpen,
-  CalendarDays,
-  Gauge,
-  Home,
-  Map,
-  Radio,
-  ScrollText,
-  Trophy,
-  type LucideIcon,
-} from "lucide-react";
+import { Activity, BookOpen, Gauge, Map, Radio, Trophy, type LucideIcon } from "lucide-react";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
 import { PhoneFrame } from "@/components/home/phone-frame";
 
@@ -61,6 +50,7 @@ export function AppExperience() {
           <PhoneColumn
             platform="android"
             label="Android"
+            caption="Season schedule"
             className="w-[27%] max-w-[13rem]"
             motionProps={
               reduced
@@ -72,13 +62,13 @@ export function AppExperience() {
                     transition: { duration: 0.7 },
                   }
             }
-          >
-            <SeasonScreen />
-          </PhoneColumn>
+            screenshotSrc="/app/schedule-screen.webp"
+          />
 
           <PhoneColumn
             platform="ios"
             label="iOS"
+            caption="Live timing tower"
             glow
             className="z-10 w-[34%] max-w-[17rem]"
             motionProps={
@@ -91,13 +81,13 @@ export function AppExperience() {
                     transition: { duration: 0.75, delay: 0.08 },
                   }
             }
-          >
-            <HomeScreen />
-          </PhoneColumn>
+            screenshotSrc="/app/live-tower.webp"
+          />
 
           <PhoneColumn
             platform="android"
             label="Android"
+            caption="Stewards' Room"
             className="w-[27%] max-w-[13rem]"
             motionProps={
               reduced
@@ -109,9 +99,8 @@ export function AppExperience() {
                     transition: { duration: 0.7, delay: 0.14 },
                   }
             }
-          >
-            <StewardsScreen />
-          </PhoneColumn>
+            screenshotSrc="/app/stewards-room-tyres.webp"
+          />
         </div>
 
         <div
@@ -138,24 +127,32 @@ export function AppExperience() {
 function PhoneColumn({
   platform,
   label,
+  caption,
   glow,
   className,
   motionProps,
-  children,
+  screenshotSrc,
 }: {
   platform: "ios" | "android";
   label: string;
+  caption: string;
   glow?: boolean;
   className?: string;
   motionProps: Record<string, unknown>;
-  children: React.ReactNode;
+  screenshotSrc: string;
 }) {
   return (
     <motion.div {...motionProps} className={className}>
-      <PhoneFrame ariaLabel={`GridBeat on ${label}`} platform={platform} glow={glow}>
-        {children}
-      </PhoneFrame>
-      <div className="mt-4 text-center text-[9px] font-bold tracking-[0.22em] text-white/32 uppercase">{label}</div>
+      <PhoneFrame
+        ariaLabel={`${caption}, running on ${label}`}
+        platform={platform}
+        glow={glow}
+        screenshotSrc={screenshotSrc}
+      />
+      <div className="mt-4 text-center">
+        <div className="text-[11px] font-bold text-white/72">{caption}</div>
+        <div className="mt-1 text-[9px] font-bold tracking-[0.22em] text-white/30 uppercase">{label}</div>
+      </div>
     </motion.div>
   );
 }
@@ -253,96 +250,5 @@ function SpotlightCard({
         <p className="mt-3 max-w-sm text-sm leading-6 text-white/43">{feature.copy}</p>
       </div>
     </motion.article>
-  );
-}
-
-function ScreenShell({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="@container flex h-full flex-col bg-black px-[5%] pt-[9%] pb-[5%]">
-      <div className="text-center text-[5cqw] font-bold tracking-[0.09em]">{title}</div>
-      {children}
-      <PhoneNav />
-    </div>
-  );
-}
-
-function PhoneNav() {
-  const items: LucideIcon[] = [Home, CalendarDays, Trophy, ScrollText, Activity];
-  return (
-    <div className="mt-auto flex h-[10%] items-center justify-around rounded-full border border-[#2c2c2c] bg-black px-[3%]">
-      {items.map((Icon, i) => (
-        <Icon
-          key={i}
-          className={`h-[4.4cqw] w-[4.4cqw] ${i === 0 ? "text-white" : "text-white/28"}`}
-          strokeWidth={2.2}
-          aria-hidden="true"
-        />
-      ))}
-    </div>
-  );
-}
-
-function HomeScreen() {
-  return (
-    <ScreenShell title="GRIDBEAT">
-      <div className="mt-[6%] rounded-[5cqw] bg-[#191919] p-[5%]">
-        <div className="text-[3cqw] font-bold tracking-[0.2em] text-[#df3409]">NEXT RACE</div>
-        <div className="mt-[3%] text-[5.5cqw] leading-tight font-bold">Your race weekend</div>
-        <div className="mt-[2%] text-[3.4cqw] text-white/42">Schedule · countdown · sessions</div>
-      </div>
-      <div className="mt-[5%] text-[3cqw] font-bold tracking-[0.2em] text-white/36">YOUR SEASON</div>
-      <div className="mt-[3%] grid grid-cols-2 gap-[3%]">
-        <div className="rounded-[4cqw] bg-[#121212] p-[5%]">
-          <div className="text-[3cqw] text-white/35">DRIVER</div>
-          <div className="mt-[10%] text-[4.4cqw] font-bold">Standings</div>
-        </div>
-        <div className="rounded-[4cqw] bg-[#121212] p-[5%]">
-          <div className="text-[3cqw] text-white/35">TEAM</div>
-          <div className="mt-[10%] text-[4.4cqw] font-bold">Season</div>
-        </div>
-      </div>
-      <div className="mt-[5%] rounded-[4cqw] border border-[#b52400]/30 bg-[#b52400]/10 p-[5%]">
-        <div className="text-[3cqw] font-bold text-[#df3409]">SEASON PULSE</div>
-        <div className="mt-[3%] h-[1.6cqw] rounded bg-white/12" />
-        <div className="mt-[2%] h-[1.6cqw] w-2/3 rounded bg-white/12" />
-      </div>
-    </ScreenShell>
-  );
-}
-
-function SeasonScreen() {
-  return (
-    <ScreenShell title="STANDINGS">
-      <div className="mt-[7%] space-y-[3%]">
-        {["DRIVERS", "CONSTRUCTORS", "RESULTS", "CIRCUITS", "ARCHIVE"].map((item, index) => (
-          <div key={item} className="flex items-center rounded-[3cqw] bg-[#151515] px-[5%] py-[5%]">
-            <span className="mr-[4%] text-[4cqw] font-bold text-white/25">0{index + 1}</span>
-            <span className="text-[4cqw] font-bold text-white/74">{item}</span>
-          </div>
-        ))}
-      </div>
-    </ScreenShell>
-  );
-}
-
-function StewardsScreen() {
-  return (
-    <ScreenShell title="STEWARDS">
-      <div className="mt-[7%] flex gap-[5%] border-b border-white/10 pb-[4%] text-[3cqw] font-bold">
-        <span className="text-[#df3409]">WEEKEND</span>
-        <span className="text-white/28">POINTS</span>
-        <span className="text-white/28">GRID</span>
-      </div>
-      <div className="mt-[5%] rounded-[4cqw] border border-[#ffd600]/25 bg-[#ffd600]/10 p-[5%]">
-        <div className="text-[3cqw] font-bold text-[#ffd600]">RACE CONTROL</div>
-        <div className="mt-[4%] h-[1.5cqw] rounded bg-white/15" />
-        <div className="mt-[2%] h-[1.5cqw] w-3/4 rounded bg-white/15" />
-      </div>
-      <div className="mt-[4%] rounded-[4cqw] border border-[#2979ff]/25 bg-[#2979ff]/10 p-[5%]">
-        <div className="text-[3cqw] font-bold text-[#2979ff]">FIA DOCUMENTS</div>
-        <div className="mt-[4%] h-[1.5cqw] rounded bg-white/15" />
-        <div className="mt-[2%] h-[1.5cqw] w-4/5 rounded bg-white/15" />
-      </div>
-    </ScreenShell>
   );
 }

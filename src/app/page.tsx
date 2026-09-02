@@ -7,6 +7,7 @@ import { ApiAccessSection } from "@/components/home/api-access-section";
 import { TheLap } from "@/components/home/the-lap";
 import { ChampionshipChart } from "@/components/home/championship-chart";
 import { ArchiveSection } from "@/components/home/archive-section";
+import { WhatsNext } from "@/components/home/whats-next";
 import { BrandMark } from "@/components/home/brand-mark";
 import {
   getAllRaceSeasons,
@@ -85,13 +86,14 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-black">
-      <Hero season={config.currentSeason} standings={allDrivers} nextRace={nextRace} />
+      <Hero standings={allDrivers} nextRace={nextRace} />
       <TheLap circuit={lapCircuit} />
       {chartDrivers.length > 0 && progression.length > 0 && (
         <ChampionshipChart drivers={chartDrivers} progression={progression} />
       )}
       {seasons.length > 0 && <ArchiveSection totals={totals} seasons={seasons} />}
       <AppExperience />
+      <WhatsNext />
       <DashboardPromo />
       {apiAccessVisible && (
         <ApiAccessSection enrollmentUrl={process.env.NEXT_PUBLIC_API_ENROLLMENT_URL} totals={totals} />
@@ -138,6 +140,8 @@ function DownloadSection() {
 const FOOTER_LINKS = [
   { href: "#mobile", label: "Mobile app" },
   { href: "#features", label: "Features" },
+  { href: "#whats-next", label: "What's next" },
+  { href: "#api-access", label: "Developer access" },
   { href: "/live", label: "Live dashboard" },
   { href: "/schedule", label: "Schedule" },
   { href: "/standings", label: "Standings" },

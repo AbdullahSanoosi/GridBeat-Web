@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, Home, ScrollText, Trophy } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { PhoneFrame } from "@/components/home/phone-frame";
 import { BrandMark } from "@/components/home/brand-mark";
@@ -11,11 +10,12 @@ import type { F1Race } from "@/lib/models/schedule";
 
 const NAV_LINKS = [
   { href: "#mobile", label: "The app" },
-  { href: "#features", label: "Features" },
+  { href: "#archive", label: "The data" },
+  { href: "#whats-next", label: "What's next" },
   { href: "#dashboard", label: "Web dashboard" },
 ] as const;
 
-export function Hero({ season, standings, nextRace }: { season: number; standings: HomeDriverStanding[]; nextRace: F1Race | null }) {
+export function Hero({ standings, nextRace }: { standings: HomeDriverStanding[]; nextRace: F1Race | null }) {
   const reduced = useReducedMotion();
   const reveal = (delay: number) =>
     reduced
@@ -130,46 +130,15 @@ export function Hero({ season, standings, nextRace }: { season: number; standing
             <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/35">Up next · R{nextRace.round}</div>
             <div className="mt-1 truncate text-[11px] font-bold text-white">{nextRace.raceName}</div>
           </div>}
-          <PhoneFrame ariaLabel="GridBeat championship standings on iOS" platform="ios" glow className="mx-auto w-[72%] max-w-[17rem]">
-            <HeroPhoneScreen season={season} standings={standings.slice(0, 6)} />
-          </PhoneFrame>
+          <PhoneFrame
+            ariaLabel="The GridBeat home screen on iOS, showing the countdown to the Italian Grand Prix"
+            platform="ios"
+            glow
+            screenshotSrc="/app/home-screen.webp"
+            className="mx-auto w-[72%] max-w-[17rem]"
+          />
         </motion.div>
       </div>
     </section>
-  );
-}
-
-function HeroPhoneScreen({ season, standings }: { season: number; standings: HomeDriverStanding[] }) {
-  return (
-    <div className="@container flex h-full flex-col bg-black px-[5%] pb-[5%] pt-[9%]">
-      <div className="text-center text-[5cqw] font-bold tracking-[0.1em] text-white">STANDINGS</div>
-      <div className="mt-[6%] rounded-[5cqw] border border-[#b52400]/30 bg-[#b52400]/10 p-[4%]">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[3cqw] font-bold tracking-[0.18em] text-[#df3409]">{season} SEASON</div>
-            <div className="mt-[1%] text-[4.5cqw] font-bold text-white">Drivers&apos; Championship</div>
-          </div>
-          <div className="rounded-full bg-[#b52400] px-[3%] py-[1.5%] text-[3cqw] font-bold text-white">LIVE DATA</div>
-        </div>
-      </div>
-      <div className="mt-[4%] flex-1 space-y-[2%]">
-        {standings.map((row) => (
-          <div key={row.driverId} className="flex items-center rounded-[3cqw] bg-[#191919] px-[4%] py-[3.2%]">
-            <span className="w-[9%] text-[4.2cqw] font-bold text-white/45">{row.position}</span>
-            <span className="mr-[3%] h-[7cqw] w-[1.2cqw] rounded-full" style={{ backgroundColor: row.color }} />
-            <span className="flex-1 text-[4.5cqw] font-bold text-white">{row.code}</span>
-            <span className="mr-[4%] text-[3cqw] text-white/35">{row.wins}W</span>
-            <span className={`text-[3.7cqw] ${row.position === 1 ? "text-[#bf00ff]" : "text-white/68"}`}>{row.points} PTS</span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-[4%] flex h-[12%] items-center justify-around rounded-full border border-[#2c2c2c] bg-black px-[3%]">
-        <Home className="h-[4.6cqw] w-[4.6cqw] text-white" strokeWidth={2.2} aria-hidden="true" />
-        <CalendarDays className="h-[4.6cqw] w-[4.6cqw] text-white/30" strokeWidth={2.2} aria-hidden="true" />
-        <Trophy className="h-[4.6cqw] w-[4.6cqw] text-white/30" strokeWidth={2.2} aria-hidden="true" />
-        <ScrollText className="h-[4.6cqw] w-[4.6cqw] text-white/30" strokeWidth={2.2} aria-hidden="true" />
-        <span className="flex h-[9cqw] w-[9cqw] items-center justify-center rounded-full bg-[#b52400] text-[3cqw] font-bold text-white">LIVE</span>
-      </div>
-    </div>
   );
 }
