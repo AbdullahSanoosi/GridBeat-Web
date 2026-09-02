@@ -12,14 +12,13 @@ import { PhoneFrame } from "@/components/home/phone-frame";
  * prove. Real captures, no recreations.
  *
  * It advances on its own so a visitor who never touches it still sees all
- * nine, but it yields the moment they engage: hovering holds the current
- * screen indefinitely, and a wheel/touch/drag hands control over for six
- * seconds of idle before the loop picks up again from wherever they left it.
- * Someone deciding whether to install has to be able to sit on one screen
- * without fighting a carousel.
+ * nine, and yields the moment they engage: a wheel, touch or drag hands
+ * control over for six seconds of idle, then the loop picks up from
+ * wherever they left it rather than snapping back to its own position.
  */
 const ADVANCE_MS = 2800;
 const RESUME_AFTER_INPUT_MS = 6000;
+const GLIDE_MS = 560;
 const SCREENS: { src: string; title: string; copy: string }[] = [
   { src: "/app/home-screen.webp", title: "Home", copy: "Next session countdown, last race, championship" },
   { src: "/app/live-tower.webp", title: "Timing tower", copy: "Gaps, sectors, tyres and DRS, live" },
@@ -36,9 +35,12 @@ export function ScreenGallery() {
   const reduced = useReducedMotion();
   const railRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
-  // Timestamp until which the auto-loop stays out of the way. Infinity while
-  // the pointer is over the rail; a deadline after a scroll/touch/drag.
+  // Timestamp until which the auto-loop stays out of the way, set by a real
+  // interaction (wheel, touch, drag). Deliberately NOT set by hover: this
+  // rail is a full-bleed 1440x612 band, so on desktop the cursor rests
+  // inside it most of the time and a hover-pause froze the loop outright.
   const holdUntil = useRef(0);
+  const frame = useRef<number | null>(null);
 
   // Track which card is centred so the counter below stays truthful.
   useEffect(() => {
@@ -75,6 +77,36 @@ export function ScreenGallery() {
     const rail = railRef.current;
     if (!rail || reduced) return;
 
+    // Glide by writing scrollLeft per frame rather than calling
+    // scrollTo({ behavior: "smooth" }).
+    //
+    // The smooth path does not survive this container: the rail is
+    // `scroll-snap-type: x mandatory` with `snap-center`, and because the
+    // rail (1440) is far wider than a card (240), the first three cards all
+    // resolve to snap position 0 — measured snap points are
+    // [0,0,0,260,536,812,1072,1072,1072]. Against that, the smooth scroll
+    // was issued correctly every tick and never landed: instrumenting
+    // scrollTo on the deployed page showed four identical
+    // `{left: 276, behavior: "smooth"}` calls in 12s with scrollLeft still
+    // 0. A direct scrollLeft write does stick (276, snapping to 260, and
+    // holding there), so the tween drives it that way instead.
+    const glide = (to: number) => {
+      const from = rail.scrollLeft;
+      const delta = to - from;
+      if (Math.abs(delta) < 1) return;
+      const started = performance.now();
+      const step = (now: number) => {
+        const t = Math.min((now - started) / GLIDE_MS, 1);
+        // easeInOutQuad — starts and ends at rest, so consecutive steps read
+        // as one continuous drift rather than a series of jumps.
+        const eased = t < 0.5 ? 2 * t * t : 1 - (2 - 2 * t) ** 2 / 2;
+        rail.scrollLeft = from + delta * eased;
+        frame.current = t < 1 ? requestAnimationFrame(step) : null;
+      };
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      frame.current = requestAnimationFrame(step);
+    };
+
     const id = setInterval(() => {
       if (Date.now() < holdUntil.current) return;
       const cards = rail.querySelectorAll<HTMLElement>("[data-card]");
@@ -88,14 +120,19 @@ export function ScreenGallery() {
       // half-pitch tolerance also absorbs scroll-snap pulling the resting
       // position a few px off `max`, which would otherwise stick the loop.
       const atEnd = max - rail.scrollLeft < pitch * 0.5;
-      rail.scrollTo({
-        left: atEnd ? 0 : Math.min(rail.scrollLeft + pitch, max),
-        behavior: "smooth",
-      });
+      glide(atEnd ? 0 : Math.min(rail.scrollLeft + pitch, max));
     }, ADVANCE_MS);
 
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    };
   }, [reduced]);
+
+  const yieldToVisitor = () => {
+    holdUntil.current = Date.now() + RESUME_AFTER_INPUT_MS;
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+  };
 
   return (
     <section className="relative overflow-hidden border-t border-white/10 py-20 sm:py-28">
@@ -110,21 +147,10 @@ export function ScreenGallery() {
 
       <div
         ref={railRef}
-        onPointerEnter={() => {
-          holdUntil.current = Infinity;
-        }}
-        onPointerLeave={() => {
-          holdUntil.current = Date.now() + RESUME_AFTER_INPUT_MS;
-        }}
-        onWheel={() => {
-          holdUntil.current = Date.now() + RESUME_AFTER_INPUT_MS;
-        }}
-        onTouchStart={() => {
-          holdUntil.current = Date.now() + RESUME_AFTER_INPUT_MS;
-        }}
-        onTouchEnd={() => {
-          holdUntil.current = Date.now() + RESUME_AFTER_INPUT_MS;
-        }}
+        onWheel={yieldToVisitor}
+        onTouchStart={yieldToVisitor}
+        onTouchEnd={yieldToVisitor}
+        onPointerDown={yieldToVisitor}
         className="flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-6 sm:gap-9 sm:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {SCREENS.map((screen, i) => (
@@ -163,7 +189,7 @@ export function ScreenGallery() {
             />
           ))}
         </div>
-        <span className="text-[10px] tracking-[0.16em] text-white/28 uppercase">Hover to hold &middot; iOS build</span>
+        <span className="text-[10px] tracking-[0.16em] text-white/28 uppercase">Swipe to take over &middot; iOS build</span>
       </div>
     </section>
   );
