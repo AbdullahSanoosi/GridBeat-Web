@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { MARKETING_HOST, DASHBOARD_HOST } from "@/lib/hosts";
 
 /**
  * Splits the marketing homepage onto its own domain from the dashboard.
@@ -18,9 +19,6 @@ import { NextResponse, type NextRequest } from "next/server";
  * no separate staging-marketing domain, so staging keeps today's single-host
  * behavior (`/` = hero, everything else = dashboard) for testing changes.
  */
-const MARKETING_HOST = "gridbeat.app";
-const DASHBOARD_HOST = "dashboard.gridbeat.app";
-
 const DASHBOARD_PREFIXES = [
   "/schedule",
   "/standings",

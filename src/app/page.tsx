@@ -21,6 +21,7 @@ import {
 import { config } from "@/lib/config";
 import { isUpcoming, raceFromRow } from "@/lib/models/schedule";
 import { fetchCircuitOutline } from "@/lib/home/circuit-outline";
+import { getDashboardBase } from "@/lib/home/dashboard-base";
 import {
   buildChampionshipProgression,
   buildSeasonRaceCounts,
@@ -77,6 +78,7 @@ export default async function HomePage() {
 
   // The lap section follows the calendar: the next race's own circuit SVG,
   // fetched server-side, with baked geometry as the fallback.
+  const dashboardBase = await getDashboardBase();
   const outline = await fetchCircuitOutline(nextRace?.circuit.imageUrl, nextRace?.circuit.circuitId);
   const lapCircuit = {
     ...outline,
@@ -87,21 +89,21 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-black">
-      <Hero standings={allDrivers} nextRace={nextRace} />
-      <TheLap circuit={lapCircuit} />
+      <Hero standings={allDrivers} nextRace={nextRace} dashboardBase={dashboardBase} />
+      <TheLap circuit={lapCircuit} dashboardBase={dashboardBase} />
       {chartDrivers.length > 0 && progression.length > 0 && (
-        <ChampionshipChart drivers={chartDrivers} progression={progression} />
+        <ChampionshipChart drivers={chartDrivers} progression={progression} dashboardBase={dashboardBase} />
       )}
       {seasons.length > 0 && <ArchiveSection totals={totals} seasons={seasons} />}
       <AppExperience />
       <ScreenGallery />
       <WhatsNext />
-      <DashboardPromo />
+      <DashboardPromo dashboardBase={dashboardBase} />
       {apiAccessVisible && (
         <ApiAccessSection enrollmentUrl={process.env.NEXT_PUBLIC_API_ENROLLMENT_URL} totals={totals} />
       )}
       <DownloadSection />
-      <Footer />
+      <Footer dashboardBase={dashboardBase} />
     </main>
   );
 }
@@ -150,7 +152,7 @@ const FOOTER_LINKS = [
   { href: "/stewards-room", label: "Stewards’ Room" },
 ] as const;
 
-function Footer() {
+function Footer({ dashboardBase }: { dashboardBase: string }) {
   return (
     <footer className="border-t border-white/10 px-5 py-10 sm:px-8">
       <div className="mx-auto flex max-w-[84rem] flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
@@ -160,7 +162,13 @@ function Footer() {
         </Link>
         <nav className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3" aria-label="Footer">
           {FOOTER_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="text-[11px] text-white/45 transition-colors hover:text-white">
+            <Link
+              key={link.href}
+              // Same-page anchors (#mobile etc.) stay relative on purpose —
+              // only a real dashboard route needs the marketing-host prefix.
+              href={link.href.startsWith("#") ? link.href : `${dashboardBase}${link.href}`}
+              className="text-[11px] text-white/45 transition-colors hover:text-white"
+            >
               {link.label}
             </Link>
           ))}

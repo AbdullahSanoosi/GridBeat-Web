@@ -38,9 +38,11 @@ function teamLogo(team: string) {
 export function ChampionshipChart({
   drivers,
   progression,
+  dashboardBase,
 }: {
   drivers: HomeDriverStanding[];
   progression: ChampionshipPoint[];
+  dashboardBase: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
@@ -151,7 +153,7 @@ export function ChampionshipChart({
         </figure>
 
         <Link
-          href="/standings"
+          href={`${dashboardBase}/standings`}
           className="mt-6 inline-block rounded-full border border-white/15 px-5 py-2.5 text-xs font-bold tracking-wide transition-colors hover:border-white/40 hover:bg-white/5"
         >
           See full standings

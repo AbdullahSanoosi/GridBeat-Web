@@ -82,7 +82,7 @@ const SECTORS = [
   },
 ] as const;
 
-export function TheLap({ circuit }: { circuit: LapCircuit }) {
+export function TheLap({ circuit, dashboardBase }: { circuit: LapCircuit; dashboardBase: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLength, setPathLength] = useState(0);
@@ -254,7 +254,14 @@ export function TheLap({ circuit }: { circuit: LapCircuit }) {
           {/* Sector cards */}
           <div className="flex flex-col gap-4 lg:gap-[clamp(0.6rem,1.6vh,1.25rem)]">
             {SECTORS.map((s, i) => (
-              <SectorCard key={s.n} sector={s} index={i} progress={progress} reduced={!!reduced} />
+              <SectorCard
+                key={s.n}
+                sector={s}
+                index={i}
+                progress={progress}
+                reduced={!!reduced}
+                dashboardBase={dashboardBase}
+              />
             ))}
           </div>
         </div>
@@ -322,11 +329,13 @@ function SectorCard({
   index,
   progress,
   reduced,
+  dashboardBase,
 }: {
   sector: (typeof SECTORS)[number];
   index: number;
   progress: ReturnType<typeof useSpring>;
   reduced: boolean;
+  dashboardBase: string;
 }) {
   // Each sector lights up as the car reaches its third of the lap.
   const span = 1 / SECTORS.length;
@@ -382,7 +391,7 @@ function SectorCard({
         {sector.items.map((item) => (
           <Link
             key={item.label}
-            href={item.href}
+            href={`${dashboardBase}${item.href}`}
             className="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/[0.05] lg:py-[clamp(0.25rem,0.8vh,0.5rem)]"
           >
             <span

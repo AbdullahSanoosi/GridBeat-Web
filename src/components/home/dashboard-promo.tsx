@@ -15,7 +15,7 @@ const SURFACES = [
   { href: "/stewards-room", label: "Stewards' Room", detail: "FIA documents, decoded", color: "#ffd600" },
 ] as const;
 
-export function DashboardPromo() {
+export function DashboardPromo({ dashboardBase }: { dashboardBase: string }) {
   return (
     <section id="dashboard" className="border-t border-white/10 px-5 py-20 sm:px-8 sm:py-28">
       <div className="mx-auto grid max-w-[84rem] items-center gap-12 lg:grid-cols-[0.72fr_1fr] lg:gap-16">
@@ -35,13 +35,13 @@ export function DashboardPromo() {
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/live"
+              href={`${dashboardBase}/live`}
               className="inline-flex min-h-12 items-center rounded-full bg-white px-7 text-xs font-bold text-black transition-transform hover:-translate-y-0.5"
             >
               Enter live dashboard
             </Link>
             <Link
-              href="/schedule"
+              href={`${dashboardBase}/schedule`}
               className="inline-flex min-h-12 items-center rounded-full border border-white/14 px-7 text-xs font-bold text-white transition-colors hover:border-white/35"
             >
               Browse the season
@@ -63,7 +63,7 @@ export function DashboardPromo() {
             {SURFACES.map((surface) => (
               <Link
                 key={surface.href}
-                href={surface.href}
+                href={`${dashboardBase}${surface.href}`}
                 className="group flex min-h-44 flex-col justify-between bg-[#101010] p-6 transition-colors hover:bg-[#161616]"
               >
                 <span

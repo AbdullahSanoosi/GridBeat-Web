@@ -15,7 +15,18 @@ const NAV_LINKS = [
   { href: "#dashboard", label: "Web dashboard" },
 ] as const;
 
-export function Hero({ standings, nextRace }: { standings: HomeDriverStanding[]; nextRace: F1Race | null }) {
+export function Hero({
+  standings,
+  nextRace,
+  dashboardBase,
+}: {
+  standings: HomeDriverStanding[];
+  nextRace: F1Race | null;
+  /** "" locally/on the dashboard host; the dashboard's absolute origin on
+   *  the marketing host — see lib/home/dashboard-base.ts for why a plain
+   *  relative href isn't enough here. */
+  dashboardBase: string;
+}) {
   const reduced = useReducedMotion();
   const reveal = (delay: number) =>
     reduced
@@ -58,7 +69,7 @@ export function Hero({ standings, nextRace }: { standings: HomeDriverStanding[];
         </nav>
 
         <Link
-          href="/schedule"
+          href={`${dashboardBase}/schedule`}
           className="rounded-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[11px] font-bold text-white transition-colors hover:border-white/35 hover:bg-white/[0.08] sm:px-5 sm:text-xs"
         >
           Open dashboard <span aria-hidden="true">↗</span>
@@ -96,7 +107,7 @@ export function Hero({ standings, nextRace }: { standings: HomeDriverStanding[];
               Explore the mobile app
             </Link>
             <Link
-              href="/live"
+              href={`${dashboardBase}/live`}
               className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/16 bg-white/[0.035] px-7 text-sm font-bold text-white transition-colors hover:border-white/35 hover:bg-white/[0.07]"
             >
               Enter live dashboard
