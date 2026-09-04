@@ -942,6 +942,64 @@ started (the prod/staging split commits, made directly against GitHub
 outside this session) — merged cleanly, no conflicting files, before
 pushing.
 
+**Done — domain split: `gridbeat.app` (marketing) vs. `dashboard.gridbeat.app`
+(the app), both the same container.** The user wanted the homepage on the
+apex domain for SEO and the dashboard kept separate — implemented as host-
+based routing in `src/middleware.ts`, not a second deployment. Same
+`gridbeat-web` container behind the same Cloudflare tunnel serves both;
+Cloudflare just needs a second Public Hostname added
+(`gridbeat.app` → `localhost:3000`, same target as `dashboard.gridbeat.app` —
+that's a dashboard-side step outside this repo, see the tunnel note above).
+Considered and rejected splitting the homepage onto Vercel: it would
+duplicate the design system, need its own fetch path to the same stats API
+to keep the real (non-fake) data CLAUDE.md already requires, and buys no
+SEO benefit a second hostname on the existing box doesn't already give.
+
+Middleware compares the exact request `Host` header (a `www.` prefix is
+stripped so that variant behaves the same if it's ever pointed at the tunnel)
+against two constants, `MARKETING_HOST`/`DASHBOARD_HOST`:
+- On `gridbeat.app`, any path under a fixed list of dashboard prefixes
+  (`/schedule`, `/live`, `/driver`, `/api`, etc.) 308-redirects to the same
+  path on `dashboard.gridbeat.app` instead of 404ing. This is a blocklist,
+  not an allowlist — static assets (`/favicon.ico`, `/_next/*`, brand/app
+  screenshot images the homepage itself renders) never match any prefix and
+  pass through untouched, so there was no need to enumerate every asset path
+  the homepage depends on. The homepage's own CTAs (`DashboardPromo`,
+  `TheLap`'s sector links) already use relative hrefs like `/live`, so they
+  resolve correctly through this with no link-rewriting anywhere.
+- On `dashboard.gridbeat.app`, `/` alone 307-redirects to `/schedule` —
+  restores the app's original pre-marketing-homepage landing behavior
+  (`redirect("/schedule")`) rather than showing the marketing hero a second
+  time on the app's own domain.
+- Every other host (`webapp.5928104.xyz` staging, `localhost` dev) falls
+  through untouched — deliberately scoped to only the two production
+  hostnames, since there's no separate staging-marketing domain and staging
+  needs to keep testing today's single-host behavior (`/` = hero, everything
+  else = dashboard).
+
+Verified locally by spoofing the `Host` header against the dev server
+(`curl -H "Host: gridbeat.app" ...`) rather than needing real DNS: all of
+`gridbeat.app /` (200, unredirected), `gridbeat.app /schedule` (308 →
+`dashboard.gridbeat.app/schedule`), a nested dashboard route
+(`/driver/max_verstappen`, 308, prefix match works on sub-paths),
+`dashboard.gridbeat.app /` (307 → `/schedule`), `dashboard.gridbeat.app
+/schedule` (200, unredirected), `www.gridbeat.app` (redirects the same as
+bare), a static asset on the marketing host (`favicon.ico`, 200, untouched),
+an API route on the marketing host (`/api/strategy-briefings`, 308, also
+redirected for consistency even though nothing on the homepage itself calls
+it), and both staging-host paths (200, completely unaffected) — all matched
+expectations. `npx tsc --noEmit`, `npm run lint`, and `npm run build` clean.
+
+**Not yet done — the Cloudflare-side half of this.** Adding the
+`gridbeat.app` Public Hostname to the tunnel is a dashboard action this
+session has no credentials for (same "dashboard-managed tunnel, no local
+cert on the box" constraint as the original `webapp.5928104.xyz` hostname —
+see below). Once that hostname resolves, also set
+`NEXT_PUBLIC_SITE_URL=https://gridbeat.app` in `.env.production` on the box
+(already env-driven at [layout.tsx:8](src/app/layout.tsx:8), so this is an
+env change + rebuild, not a code change) so OG/canonical tags point at the
+marketing domain instead of the dashboard one.
+
 **Done — Cloudflare Public Hostname:** `webapp.5928104.xyz` → `http://localhost:3000`
 added to the same tunnel (`f1-tunnel`) already serving `api.5928104.xyz` and
 `test.5928104.xyz` (4 routes total on that tunnel now — nowhere near
