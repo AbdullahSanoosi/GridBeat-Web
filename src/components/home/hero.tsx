@@ -95,8 +95,8 @@ export function Hero({
           </motion.h1>
 
           <motion.p {...reveal(0.22)} className="mt-7 max-w-xl text-base leading-7 text-white/58 sm:text-lg sm:leading-8">
-            The feed the pit wall watches, not the broadcast&rsquo;s highlights — timing, telemetry, radio and
-            race control, every session, live.
+            You&rsquo;re not watching the feed. You&rsquo;re on the pit wall — live timing, telemetry, radio and
+            race control, exactly as the engineers see it.
           </motion.p>
 
           <motion.div {...reveal(0.31)} className="mt-9 flex flex-col gap-3 sm:flex-row">
