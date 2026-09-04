@@ -76,8 +76,8 @@ export function Hero({
         </Link>
       </header>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-5rem)] max-w-[88rem] items-center gap-12 px-5 pb-16 pt-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.8fr)] lg:px-12 lg:pb-10 lg:pt-0">
-        <div className="max-w-3xl">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-5rem)] max-w-[88rem] grid-cols-1 items-center gap-12 px-5 pb-16 pt-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.8fr)] lg:px-12 lg:pb-10 lg:pt-0">
+        <div className="min-w-0 max-w-3xl">
           <motion.div {...reveal(0.05)} className="mb-7 flex items-center gap-3">
             <span className="h-2 w-2 rounded-full bg-[#df3409] shadow-[0_0_18px_#df3409]" />
             <span className="font-[var(--font-f1)] text-[10px] font-bold uppercase tracking-[0.24em] text-white/55">
@@ -87,7 +87,7 @@ export function Hero({
 
           <motion.h1
             {...reveal(0.12)}
-            className="font-[var(--font-f1)] text-[clamp(3.4rem,8vw,7.8rem)] font-bold italic leading-[0.86] tracking-[-0.065em] text-white"
+            className="font-[var(--font-f1)] text-[clamp(1.75rem,8vw,7.8rem)] font-bold italic leading-[0.86] tracking-[-0.065em] text-white"
           >
             FEEL EVERY
             <br />
@@ -131,13 +131,13 @@ export function Hero({
           className="relative mx-auto w-full max-w-[28rem] lg:mr-6"
         >
           <div className="absolute inset-x-[12%] bottom-[-4%] h-[18%] rounded-full bg-[#df3409]/40 blur-[52px]" />
-          {standings[0] && <div className="absolute -left-8 top-[15%] z-20 rounded-2xl border border-white/10 bg-[#121212]/90 px-4 py-3 shadow-2xl backdrop-blur-xl sm:-left-16">
+          {standings[0] && <div className="absolute left-1 top-[15%] z-20 rounded-2xl border border-white/10 bg-[#121212]/90 px-4 py-3 shadow-2xl backdrop-blur-xl sm:-left-16">
             <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/35">Championship leader</div>
             <div className="mt-1 flex items-center gap-2 text-[11px] font-bold text-white">
               <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: standings[0].color }} /> {standings[0].code} · {standings[0].points} PTS
             </div>
           </div>}
-          {nextRace && <div className="absolute -right-7 bottom-[19%] z-20 max-w-36 rounded-2xl border border-white/10 bg-[#121212]/90 px-4 py-3 shadow-2xl backdrop-blur-xl sm:-right-12">
+          {nextRace && <div className="absolute right-1 bottom-[19%] z-20 max-w-36 rounded-2xl border border-white/10 bg-[#121212]/90 px-4 py-3 shadow-2xl backdrop-blur-xl sm:-right-12">
             <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/35">Up next · R{nextRace.round}</div>
             <div className="mt-1 truncate text-[11px] font-bold text-white">{nextRace.raceName}</div>
           </div>}

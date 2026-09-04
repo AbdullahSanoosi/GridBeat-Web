@@ -90,10 +90,13 @@ export function ScreenGallery() {
     // `{left: 276, behavior: "smooth"}` calls in 12s with scrollLeft still
     // 0. A direct scrollLeft write does stick (276, snapping to 260, and
     // holding there), so the tween drives it that way instead.
-    const glide = (to: number) => {
+    const glide = (to: number, onComplete?: () => void) => {
       const from = rail.scrollLeft;
       const delta = to - from;
-      if (Math.abs(delta) < 1) return;
+      if (Math.abs(delta) < 1) {
+        onComplete?.();
+        return;
+      }
       const started = performance.now();
       const step = (now: number) => {
         const t = Math.min((now - started) / GLIDE_MS, 1);
@@ -101,7 +104,12 @@ export function ScreenGallery() {
         // as one continuous drift rather than a series of jumps.
         const eased = t < 0.5 ? 2 * t * t : 1 - (2 - 2 * t) ** 2 / 2;
         rail.scrollLeft = from + delta * eased;
-        frame.current = t < 1 ? requestAnimationFrame(step) : null;
+        if (t < 1) {
+          frame.current = requestAnimationFrame(step);
+        } else {
+          frame.current = null;
+          onComplete?.();
+        }
       };
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = requestAnimationFrame(step);
@@ -110,17 +118,22 @@ export function ScreenGallery() {
     const id = setInterval(() => {
       if (Date.now() < holdUntil.current) return;
       const cards = rail.querySelectorAll<HTMLElement>("[data-card]");
+      const clone = rail.querySelector<HTMLElement>("[data-card-clone]");
       if (cards.length < 2) return;
       const pitch = cards[1].offsetLeft - cards[0].offsetLeft;
+      const lastReal = cards[cards.length - 1];
       const max = rail.scrollWidth - rail.clientWidth;
-      // Wrap only once there's less than half a card left to travel, and
-      // clamp the last step to `max` rather than skipping it. Wrapping on
-      // "the next full step would overshoot" instead stranded the final
-      // screen — the rail stopped a card short and looped from there. The
-      // half-pitch tolerance also absorbs scroll-snap pulling the resting
-      // position a few px off `max`, which would otherwise stick the loop.
-      const atEnd = max - rail.scrollLeft < pitch * 0.5;
-      glide(atEnd ? 0 : Math.min(rail.scrollLeft + pitch, max));
+
+      // Currently resting on the last real screen — glide *forward* one more
+      // pitch into the cloned copy of screen 1 sitting right after it
+      // (pixel-identical, so this step reads as a completely normal
+      // advance), then snap to the real screen 1 with no animation the
+      // instant it lands. Gliding straight back to scrollLeft 0 instead —
+      // what this used to do — animates backward through every screen it
+      // just showed, which is the "reverses" bug this fixes.
+      const onLastReal = clone && Math.abs(rail.scrollLeft - lastReal.offsetLeft) < pitch * 0.5;
+      const target = Math.min(rail.scrollLeft + pitch, max);
+      glide(target, onLastReal ? () => { rail.scrollLeft = cards[0].offsetLeft; } : undefined);
     }, ADVANCE_MS);
 
     return () => {
@@ -174,6 +187,23 @@ export function ScreenGallery() {
             </div>
           </motion.div>
         ))}
+
+        {/* Duplicate of the first card, appended after the last real one so
+            the auto-loop's forward glide has somewhere pixel-identical to
+            land on past screen nine — see the advance effect above. Marked
+            with a different attribute than the real cards so it's invisible
+            to the dot indicator and the active-card scroll tracker. */}
+        <div
+          aria-hidden="true"
+          data-card-clone
+          className="w-[58vw] max-w-[15rem] shrink-0 snap-center sm:w-[30vw] lg:w-[17vw]"
+        >
+          <PhoneFrame ariaLabel="" platform="ios" screenshotSrc={SCREENS[0].src} />
+          <div className="mt-4">
+            <div className="text-[12px] font-bold text-white/80">{SCREENS[0].title}</div>
+            <div className="mt-1 text-[11px] leading-snug text-white/36">{SCREENS[0].copy}</div>
+          </div>
+        </div>
       </div>
 
       <div className="mx-auto mt-4 flex max-w-[84rem] items-center gap-3 px-5 sm:px-8">
