@@ -787,6 +787,41 @@ ever calls the same-origin proxy route. If you ever touch X-posts fetching,
 keep the key server-side; don't reintroduce a client-side call to
 twitterapi.io directly.
 
+### `dashboard.gridbeat.app` is temporarily gated behind HTTP Basic Auth
+
+Done 2026-09 at the user's request — the dashboard isn't finished and
+shouldn't be public yet, even though `gridbeat.app` (the marketing homepage)
+already is. `src/middleware.ts`'s `isDashboardAuthorized()` checks the
+`Authorization` header against two server-only env vars
+(`DASHBOARD_BASIC_AUTH_USER`/`DASHBOARD_BASIC_AUTH_PASS`, no `NEXT_PUBLIC_`
+prefix — set in the box's `.env`, the runtime-secrets file, never
+`.env.production`) and returns a 401 with `WWW-Authenticate` on
+`dashboard.gridbeat.app` for anyone who fails it; unset either var and the
+gate is a deliberate no-op rather than an accidental lockout. Scoped to
+exactly that hostname the same way the rest of the middleware is — staging
+(`webapp.5928104.xyz`) and local dev are never gated, and `gridbeat.app`
+itself is untouched (its dashboard-pointing CTAs still exist and still
+308/307-redirect there; a public visitor who clicks one now hits a password
+prompt instead of the app, which is the intended "not public yet" behavior,
+not a bug).
+
+**This is a stopgap, not the final access-control story.** It was chosen
+over Cloudflare Access specifically because it's something this session
+could ship end-to-end (code + env var + redeploy) without needing the
+Cloudflare dashboard, which only Abdullah/the user can reach (see the
+Cloudflare Public Hostname note above). Basic Auth over HTTPS is legitimate
+for a temporary private-preview wall — the credential goes over the wire
+TLS-protected, same trust model as the login form it's standing in for —
+but it's one shared password with no per-user identity or revocation. If
+the "not public yet" period runs long, revisit the original Cloudflare
+Access plan (free tier, up to 50 users, per-email allowlist, delete the
+policy to go public) instead of layering more onto Basic Auth.
+
+**To change the password or turn the gate off entirely:** edit
+`DASHBOARD_BASIC_AUTH_USER`/`_PASS` in `~/gridbeat-web/.env` on `f1box` (or
+delete both lines to disable it) and `sudo docker compose up -d
+gridbeat-web` — no code change needed either way.
+
 ---
 
 ## Deployment (superseded plan below, then the actual decision)
