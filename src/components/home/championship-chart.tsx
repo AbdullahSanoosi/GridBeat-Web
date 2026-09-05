@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { useInView } from "motion/react";
 import {
@@ -38,11 +37,9 @@ function teamLogo(team: string) {
 export function ChampionshipChart({
   drivers,
   progression,
-  dashboardBase,
 }: {
   drivers: HomeDriverStanding[];
   progression: ChampionshipPoint[];
-  dashboardBase: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
@@ -151,13 +148,6 @@ export function ChampionshipChart({
             Cumulative race and sprint points through round {throughRound}. Source: GridBeat F1 Stats API.
           </figcaption>
         </figure>
-
-        <Link
-          href={`${dashboardBase}/standings`}
-          className="mt-6 inline-block rounded-full border border-white/15 px-5 py-2.5 text-xs font-bold tracking-wide transition-colors hover:border-white/40 hover:bg-white/5"
-        >
-          See full standings
-        </Link>
       </div>
     </section>
   );

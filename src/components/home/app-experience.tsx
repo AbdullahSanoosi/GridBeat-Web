@@ -40,7 +40,7 @@ export function AppExperience() {
             WITHOUT THE PIT WALL.
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-sm leading-7 text-white/48 sm:text-base">
-            One app on both platforms, built on the same live feed as the dashboard: pure black, fast red accents and
+            One app on both platforms, built straight off the live feed: pure black, fast red accents and
             compact data that stays readable when the race gets loud.
           </p>
         </div>

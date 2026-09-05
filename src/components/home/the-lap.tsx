@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import {
   motion,
   useMotionValue,
@@ -82,7 +81,7 @@ const SECTORS = [
   },
 ] as const;
 
-export function TheLap({ circuit, dashboardBase }: { circuit: LapCircuit; dashboardBase: string }) {
+export function TheLap({ circuit }: { circuit: LapCircuit }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLength, setPathLength] = useState(0);
@@ -254,14 +253,7 @@ export function TheLap({ circuit, dashboardBase }: { circuit: LapCircuit; dashbo
           {/* Sector cards */}
           <div className="flex flex-col gap-4 lg:gap-[clamp(0.6rem,1.6vh,1.25rem)]">
             {SECTORS.map((s, i) => (
-              <SectorCard
-                key={s.n}
-                sector={s}
-                index={i}
-                progress={progress}
-                reduced={!!reduced}
-                dashboardBase={dashboardBase}
-              />
+              <SectorCard key={s.n} sector={s} index={i} progress={progress} reduced={!!reduced} />
             ))}
           </div>
         </div>
@@ -329,13 +321,11 @@ function SectorCard({
   index,
   progress,
   reduced,
-  dashboardBase,
 }: {
   sector: (typeof SECTORS)[number];
   index: number;
   progress: ReturnType<typeof useSpring>;
   reduced: boolean;
-  dashboardBase: string;
 }) {
   // Each sector lights up as the car reaches its third of the lap.
   const span = 1 / SECTORS.length;
@@ -388,21 +378,19 @@ function SectorCard({
       </p>
 
       <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-0.5 sm:grid-cols-2 lg:mt-[clamp(0.5rem,1.4vh,1rem)]">
+        {/* Plain descriptive rows, not links — the dashboard they'd point to
+            isn't public yet (see src/middleware.ts's Basic Auth gate). */}
         {sector.items.map((item) => (
-          <Link
-            key={item.label}
-            href={`${dashboardBase}${item.href}`}
-            className="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/[0.05] lg:py-[clamp(0.25rem,0.8vh,0.5rem)]"
-          >
+          <div key={item.label} className="flex items-start gap-2.5 rounded-lg px-2 py-1.5">
             <span
-              className="mt-[7px] h-1 w-1 shrink-0 rounded-full transition-transform duration-200 group-hover:scale-[2.4]"
+              className="mt-[7px] h-1 w-1 shrink-0 rounded-full"
               style={{ backgroundColor: sector.color }}
             />
             <span className="min-w-0">
               <span className="block text-sm font-semibold whitespace-nowrap text-white/90">{item.label}</span>
               <span className="block text-[11px] leading-snug text-(--color-text-muted)">{item.detail}</span>
             </span>
-          </Link>
+          </div>
         ))}
       </div>
     </motion.div>

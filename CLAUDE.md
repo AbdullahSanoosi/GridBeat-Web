@@ -1238,8 +1238,52 @@ directory for most of the session was the Flutter repo, not this one.
 - The original scroll-driven `TheLap` Suzuka section is restored unchanged as
   the feature/navigation spine between the marketing hero and data sections.
 - The API enrollment section is production-ready but remains controlled by
-  `NEXT_PUBLIC_API_ENROLLMENT_ENABLED`; it must stay hidden for the first
+  `NEXT_PUBLIC_API_ACCESS_HIDDEN` (corrected here — this used to say
+  `NEXT_PUBLIC_API_ENROLLMENT_ENABLED`, which was never the actual var name
+  in `page.tsx`'s `apiAccessVisible`); it must stay hidden for the first
   release unless that feature flag is explicitly enabled.
+
+**Update 2026-09 — dashboard promotion removed from the marketing page,
+API section switched off, both temporary:** user request, alongside gating
+`dashboard.gridbeat.app` behind Basic Auth (see the Security section) —
+the dashboard isn't finished, so the public marketing page shouldn't be
+sending visitors to it or talking about it. Removed everywhere on `/`:
+the header's "Open dashboard" button, the hero's "Enter live dashboard"
+CTA, the "Web dashboard" nav link, the entire `DashboardPromo` section
+(deleted — `components/home/dashboard-promo.tsx` is gone, not just
+unmounted), `ChampionshipChart`'s "See full standings" link, and the four
+dashboard-route footer links. `TheLap`'s sector-card items (Live Timing,
+Standings, Schedule, etc.) are now plain non-interactive rows instead of
+links — same copy, no click-through, since every one of them pointed at a
+route on the now-gated dashboard. One prose mention in
+`app-experience.tsx` ("built on the same live feed as the dashboard") was
+reworded to drop the reference without losing the claim. This also made
+`lib/home/dashboard-base.ts` (the `getDashboardBase()`/`dashboardBase`
+prop-threading built for the cross-origin-link fix two sessions ago)
+fully unused, so it was deleted along with the `dashboardBase` prop on
+`Hero`/`TheLap`/`ChampionshipChart`/`Footer` — nothing on the page links
+into the dashboard anymore, so nothing needs it. **Not host-conditional**:
+unlike the `gridbeat.app`/`dashboard.gridbeat.app` split in
+`src/middleware.ts`, this is a plain code removal that applies to every
+environment identically, including staging and local dev — building a
+second host-gated rendering path just for this would have been
+over-engineering a temporary content change. Verified after: zero
+case-insensitive matches for "dashboard" anywhere in the rendered page's
+visible text, and zero `<a>` hrefs pointing at any dashboard route
+(`/live`, `/schedule`, `/standings`, etc.) — only same-page anchors and
+the two self-referential `/` logo links remain.
+
+Separately, `NEXT_PUBLIC_API_ACCESS_HIDDEN=true` was added to
+`.env.production` on `f1box` (also user request, "will switch it back on
+later"). Both `gridbeat-web` and `gridbeat-web-staging` build from the
+*same* `.env.production` file (confirmed by reading `docker-compose.yml`
+— both services are `build: .` with no per-service build args), so this
+one env var change hides the API section on both production and staging
+once each image is rebuilt; there's no existing mechanism to have it
+visible on one and hidden on the other without adding real per-environment
+build config, which wasn't asked for. To bring it back: flip the var to
+`false` (or delete the line) in `.env.production` and rebuild both images
+the normal way — no code change either time, same as it was designed.
 
 ---
 
