@@ -153,11 +153,16 @@ function Footer() {
           <span className="text-[10px] text-white/35">Formula 1, live and explained.</span>
         </Link>
         <nav className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3" aria-label="Footer">
-          {FOOTER_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="text-[11px] text-white/45 transition-colors hover:text-white">
-              {link.label}
-            </Link>
-          ))}
+          {FOOTER_LINKS
+            // "Developer access" points at a section that isn't rendered at
+            // all while apiAccessVisible is off — drop the link too, or it's
+            // a dead anchor.
+            .filter((link) => apiAccessVisible || link.href !== "#api-access")
+            .map((link) => (
+              <Link key={link.href} href={link.href} className="text-[11px] text-white/45 transition-colors hover:text-white">
+                {link.label}
+              </Link>
+            ))}
         </nav>
       </div>
       <div className="mx-auto mt-10 flex max-w-[84rem] flex-col gap-2 border-t border-white/[0.07] pt-6 text-[9px] leading-relaxed text-white/28 sm:flex-row sm:justify-between">
